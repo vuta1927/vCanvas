@@ -193,8 +193,8 @@ $(window).load(function(){
                 }
             } 
             else {
-                for (var i = 0; i < Shapes.length; i++) {
-                    if (p.parent === Shapes[i].name) {
+                for (var i = 0; i < vCanvas.Shapes.length; i++) {
+                    if (p.parent === vCanvas.Shapes[i].name) {
                         vCanvas.Shapes[i].Move({point: p});
                         break;
                     }
@@ -339,7 +339,6 @@ function onInputClicked(e){
 	for (var i = 0; i < vCanvas.Shapes.length; i++) {
 		if (vCanvas.Shapes[i].name === name) {
 			for (var j = 0; j < vCanvas.Shapes[i].points.length; j++) {
-				vCanvas.Shapes[i].points[j].HidePointLabel();
 				var p = vCanvas.canvas.getItem(vCanvas.Shapes[i].points[j].name, vCanvas.Shapes[i].name);
 				p && points.push(p);
 			}
@@ -368,8 +367,8 @@ function onChangeAddPoint(e) {
 	{
 		for(var i=0; i < vCanvas.Shapes.length; i++){
 			if(vCanvas.Shapes[i].name === name){
-				AddPointMode = true;
-				currentObj = vCanvas.Shapes[i];
+				vCanvas.AddPointMode = true;
+				vCanvas.ActiveObject = vCanvas.Shapes[i];
 				vCanvas.Shapes[i].AddPointMode = true;
 			}else{
 				vCanvas.Shapes[i].AddPointMode = false;
@@ -409,10 +408,10 @@ function textChange(element, newValue) {
 			isExsit = true;
 		}
 		if(!isExsit){
-			var obj = vCanvas.Get(oldvalue);
-			if (obj) {
-				var newShape = obj.Rename(newValue);
-				vCanvas.Remove(obj);
+			var object = vCanvas.Get(oldvalue);
+			if (object) {
+				var newShape = object.Rename(newValue);
+				vCanvas.Remove(object);
 				vCanvas.Shapes.push(newShape);
 				element.defaultValue = newValue;
 			}

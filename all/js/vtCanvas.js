@@ -1,3 +1,4 @@
+var canvas;
 var vcanvas = /** @class */ (function () {
     function vcanvas(params) {
         var properties = $.extend({
@@ -6,7 +7,6 @@ var vcanvas = /** @class */ (function () {
             type: [],
             data: null,
             backgroundUrl: null,
-            canvas: null,
             Shapes: [],
             isDrawing: false,
             isMouseDown: false,
@@ -23,7 +23,6 @@ var vcanvas = /** @class */ (function () {
         this.parent = properties.parent;
         this.type = properties.type;
         this.backgroundUrl = properties.backgroundUrl;
-        this.canvas = properties.canvas;
         this.Shapes = properties.Shapes;
         this.units = properties.units;
         this.startX = properties.startX;
@@ -31,15 +30,18 @@ var vcanvas = /** @class */ (function () {
         this.tempPoint = properties.tempPoint;
         this.LineHovered = properties.LineHovered;
         this.ActiveObject = properties.ActiveObject;
+        this.init();
     }
 vcanvas.prototype.init = function(){
         $("#" + this.parent).append('<canvas id="canvas"></canvas>');
-        this.canvas = new fabric.Canvas('canvas', {selection: false,allowTouchScrolling:true,controlsAboveOverlay:false});
+        canvas = new fabric.Canvas('canvas', {selection: false,controlsAboveOverlay:false});
+        this.canvas = canvas;
+
         fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
         fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
         if (this.data){
             var RawData = JSON.parse(this.data);
-            for (var i = 0; i < RawData.length; i++) {
+            for (var i = 0; i < RawData.length; i++) {  
                 var points = [];
                 RawData[i].points.forEach(function(p){
                     points.push(new Point({name: p.name, parent: p.parent, left: p.left, top: p.top, radius: p.radius, fill: p.fill, strokeWidth:p.strokeWidth, stroke: p.stroke, lockMovementX: p.lockMovementX, lockMovementY: p.lockMovementY, index: p.index}));
@@ -52,160 +54,7 @@ vcanvas.prototype.init = function(){
                 this.newShape.Draw();
             }
         }
-        $(this.canvas.wrapperEl).on('mousewheel', function (e) {
-            var delta = e.originalEvent.wheelDelta / 500;
-            var pointer = this.canvas.getPointer(e.e);
-            // console.log(e.offsetX, e.offsetY);
-            var currentWidth = this.canvas.getWidth();
-            var currentHeight = this.canvas.getHeight();
-            console.log(this.canvas.getWidth(), this.canvas.getHeight());
-            if (delta > 0 ) {
-                this.canvas.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), this.canvas.getZoom() * 1.1);
-            }
-            if (delta < 0 ){
-                this.canvas.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), this.canvas.getZoom() / 1.1);
-            }
-            return false;
-        });
-        if (this.canvas.width != $("#" + this.parent).width()) {
-            var scaleMultiplier = $("#" + this.parent).width() / this.canvas.width;
-            var objects = this.canvas.getObjects();
-
-            this.canvas.setWidth(this.canvas.getWidth() * scaleMultiplier);
-            this.canvas.setHeight(this.canvas.getHeight() * scaleMultiplier);
-            this.canvas.renderAll();
-            this.canvas.calcOffset();
-        }
-        $(window).resize(function (){
-            if (this.canvas.width != $("#" + this.parent).width()) {
-                var scaleMultiplier = $("#" + this.parent).width() / this.canvas.width;
-                var objects = this.canvas.getObjects();
-
-                this.canvas.setWidth(this.canvas.getWidth() * scaleMultiplier);
-                this.canvas.setHeight(this.canvas.getHeight() * scaleMultiplier);
-                this.canvas.renderAll();
-                this.canvas.calcOffset();
-            }
-        });
-        this.canvas.on({
-            'mouse:down': function (o) {
-                var pointer = this.canvas.getPointer(o.e);
-                x0 = pointer.x;
-                y0 = pointer.y;
-                if (o.e.type == "touchstart"){
-                    startX = o.e.touches[0].pageX;
-                    startY = o.e.touches[0].pageY;  
-                }
-
-                if((o.e.type === 'touchmove') && (o.e.touches.length > 1)) { return; }
-                if (this.isDrawing) {
-                    this.canvas.defaultCursor = "pointer";
-                    this.isMouseDown = true;
-                    var pointer = this.canvas.getPointer(o.e);
-                    var result = randomName("line");
-
-                    var A = new Point({index: 0, name:"P-1", parent:result.name, left:pointer.x, top:pointer.y});
-                    var B = new Point({index: 1, name:"P-2", parent:result.name, left:pointer.x, top:pointer.y});
-                    var line = new Shape({name:result.name, index: result.index, type:"line", points:[A, B]});
-                    line.Draw();
-                    this.ActiveObject = line;
-                } else if (AddPointMode){
-                    var newPoint = new Point({left:x0, top:y0});
-                    this.ActiveObject.AddPoint(newPoint);
-                }else {
-                    var obj = o.target;
-                    if (!obj || obj.get('type') === "image") {
-                        panning = true;
-                    // canvas.defaultCursor = "all-scroll";
-                    var allObject = this.canvas.getObjects();
-                    for (var i = 0; i < allObject.length; i++) {
-                        if (allObject[i].get('type') === "circle") {
-                            allObject[i].set({ radius: 5 });
-                        }
-                    }
-                }
-            }
-        },
-        'mouse:move': function (o) {
-            if (this.isMouseDown && this.isDrawing) {
-                var pointer = this.canvas.getPointer(o.e);
-                this.ActiveObject.Remove();
-                for (var i = 0; i < this.ActiveObject.points.length; i++) {
-                    if (this.ActiveObject.points[i].name === "P-2"){
-                        this.ActiveObject.points[i].left = pointer.x;
-                        this.ActiveObject.points[i].top = pointer.y;
-                    }
-                }
-                this.ActiveObject.Draw();
-                //line.set({ x2: pointer.x, y2: pointer.y });
-                this.canvas.renderAll();
-            }
-            if (this.panning && o && o.e) {
-                if (o.e.type !== "touchmove"){
-                    var delta = new fabric.Point(o.e.movementX, o.e.movementY);
-                    this.canvas.relativePan(delta);
-                }else{
-                    var delta = new fabric.Point((o.e.touches[0].pageX - startX)/10, (o.e.touches[0].pageY - startY)/10);
-                    this.canvas.relativePan(delta);
-                }
-            }
-        },
-        'mouse:over': function (e) {
-            var c = e.target;
-            if (c){
-                if ( c.get('type') == "image") {
-                    c.set({ hoverCursor: "default" });
-                }
-            }
-        },
-        'mouse:out': function(e){
-            if(this.tempPoint)
-            {
-                this.canvas.remove(this.tempPoint);
-                this.tempPoint = null;
-                this.LineHovered = null;
-            }
-        }
-        ,
-        'mouse:up': function (o) {
-            if (this.isDrawing) {
-                this.ActiveObject.Remove();
-                this.ActiveObject.Draw();
-                this.Shapes.push(this.ActiveObject);
-                this.canvas.renderAll();
-            }
-            if(this.ActiveObject){
-                this.ActiveObject.isMoving = false;
-            }
-            loadDataToTable();
-            this.panning = false;
-            this.isDrawing = false;
-            this.isMouseDown = false;
-        },
-        'object:moving': function(e) {
-            var p = e.target;
-            var pointer = this.canvas.getPointer(e.e);
-            var allObject = this.canvas.getObjects();
-            if (p.name.split('-')[0] === "i") {
-                for (var i = 0; i < this.Shapes.length; i++) {
-                    if (p.parent === this.Shapes[i].name) {
-                        this.ActiveObject = this.Shapes[i];
-                        this.Shapes[i].Move({offsetX:e.e.movementX, offsetY: e.e.movementY});
-                        break;
-                    }
-                }
-            } 
-            else {
-                for (var i = 0; i < Shapes.length; i++) {
-                    if (p.parent === Shapes[i].name) {
-                        this.Shapes[i].Move({point: p});
-                        break;
-                    }
-                }
-            }
-            this.canvas.renderAll();
-        }});
-    return this.canvas;
+    return vcanvas;
 };
 vcanvas.prototype.Add = function(params){
     var properties = $.extend({
@@ -216,11 +65,9 @@ vcanvas.prototype.Add = function(params){
     var type = properties.type;
 
     var result = this.randomName(type);
-    var newShape = new Shape({name:result.name,index:result.index});
+    var newShape = new Shape({name:result.name,index:result.index, canvas: canvas});
     if(type === "rect"){
         newShape.Rect();    
-    }else{
-        newShape.Line();
     }
     newShape.Draw();
     this.Shapes.push(newShape);
@@ -266,7 +113,7 @@ vcanvas.prototype.randomName = function(type) {
     return {name:name, index:index};
 };
 vcanvas.prototype.getItem = function (name, parent) {
-    var object = null, objects = this.canvas.getObjects();
+    var object = null, objects = canvas.getObjects();
     var os = [];
     for (var i = 0, len = this.size(); i < len; i++) {
         if (parent) {
@@ -296,16 +143,16 @@ vcanvas.prototype.LoadBackground = function(params){
     }, params);
     this.url = properties.url;
     var bgImg = this.getItem('background', null);
-    this.canvas.remove(bgImg);
+    canvas.remove(bgImg);
     fabric.Image.fromURL(this.url, function (img) {
         img.selectable = false;
         img.set({name: 'background', left: 0, top: 0});
         this.background.height = img.height;
         this.background.width = img.width;
-        this.canvas.add(img);
-        this.canvas.sendToBack(img);
-        this.canvas.setZoom(0.7);
-        this.canvas.renderAll();
+        canvas.add(img);
+        canvas.sendToBack(img);
+        canvas.setZoom(0.7);
+        canvas.renderAll();
     });
 };
 vcanvas.prototype.Remove = function (object) {
@@ -365,7 +212,7 @@ var Point = /** @class */ (function () {
         this.lockMovementY = properties.lockMovementY;
         this.lbX = properties.lbX;
         this.lbY = properties.lbY;
-        this.canvas = properties.canvas;
+        canvas = properties.canvas;
     }
     Point.prototype.Draw = function () {
         var p = new fabric.Circle({
@@ -384,24 +231,24 @@ var Point = /** @class */ (function () {
         if (this.lockMovementY)
             p.set({ lockMovementY: true });
         p.hasControls = p.hasBorders = false;
-        this.vcanvas.canvas.add(p);
+        canvas.add(p);
     };
     Point.prototype.DrawPointLabel = function () {
         if (this.lbX === 0 && this.lbY === 0) {
             this.lbX = this.left + 10;
             this.lbY = this.top + 10;
         }
-        var text = this.name + " ("+(this.left/this.canvas.getWidth())*100+", "+(this.top/this.canvas.getHeight())*100+")";
+        var text = this.name + " ("+(this.left/canvas.getWidth())*100+", "+(this.top/canvas.getHeight())*100+")";
         var label = new fabric.Text(text, {name: "lb-" + this.name + "-" + this.parent ,parent: this.name, left: this.lbX, top: this.lbY,
             fontSize: 15, fontFamily: "calibri", fill: this.color, hasRotatingPoint: false, 
             centerTransform: true, selectable:true });
         label.hasControls = label.hasBorders = false;
-        this.vcanvas.canvas.add(label);
+        canvas.add(label);
     };
 
     Point.prototype.HidePointLabel = function (){
-        var lb = this.vcanvas.canvas.getItem("lb-" + this.name + "-" + this.parent, this.name);
-        this.vcanvas.canvas.remove(lb);
+        var lb = canvas.getItem("lb-" + this.name + "-" + this.parent, this.name);
+        canvas.remove(lb);
     }
     return Point;
 }());
@@ -428,7 +275,7 @@ var Shape = /** @class */ (function () {
         this.color = properties.color;
         this.isMoving = properties.isMoving;
         this.hoverCursor = properties.hoverCursor;
-        this.canvas = properties.canvas;
+        canvas = properties.canvas;
     };
     Shape.prototype.DrawLabel = function () {
         if (!this.lbX && !this.lbY) {
@@ -445,29 +292,29 @@ var Shape = /** @class */ (function () {
             fontSize: 20, fontFamily: "calibri", fill: this.color, hasRotatingPoint: false, 
             centerTransform: true, selectable:true, hoverCursor: this.hoverCursor });
         label.hasControls = label.hasBorders = false;
-        this.vcanvas.canvas.add(label);
+        canvas.add(label);
     };
     Shape.prototype.Rect = function (){
         this.type = 'rect';
         this.points = [
-        new Point({index:0, name:"P-1", parent:this.name, left:175, top:175, fill:this.color, stroke:this.color}),
-        new Point({index:1, name:"P-2", parent:this.name, left:350, top:175, fill:this.color, stroke:this.color}),
-        new Point({index:2, name:"P-3", parent:this.name, left:350, top:300, fill:this.color, stroke:this.color}),
-        new Point({index:3, name:"P-4", parent:this.name, left:175, top:300, fill:this.color, stroke:this.color})
+        new Point({index:0, name:"P-1", parent:this.name, left:175, top:175, fill:this.color, stroke:this.color, canvas:canvas}),
+        new Point({index:1, name:"P-2", parent:this.name, left:350, top:175, fill:this.color, stroke:this.color, canvas:canvas}),
+        new Point({index:2, name:"P-3", parent:this.name, left:350, top:300, fill:this.color, stroke:this.color, canvas:canvas}),
+        new Point({index:3, name:"P-4", parent:this.name, left:175, top:300, fill:this.color, stroke:this.color, canvas:canvas})
         ];
     }
     Shape.prototype.VerticalLine = function(){
         this.type = 'line',
         this.points = [
-        new Point({index:0, name:"P-1", parent:this.name, left:175, top:175, fill:this.color, stroke:this.color, lockMovementX: true}),
-        new Point({index:1, name:"P-2", parent:this.name, left:175, top:500, fill:this.color, stroke:this.color, lockMovementX: true})
+        new Point({index:0, name:"P-1", parent:this.name, left:175, top:175, fill:this.color, stroke:this.color, lockMovementX: true, canvas:canvas}),
+        new Point({index:1, name:"P-2", parent:this.name, left:175, top:500, fill:this.color, stroke:this.color, lockMovementX: true, canvas:canvas})
         ];   
     }
     Shape.prototype.HorizontalLine = function(){
         this.type = 'line';
         this.points = [
-        new Point({index:0, name:"P-1", parent:this.name, left:175, top:175, fill:this.color, stroke:this.color, lockMovementY: true}),
-        new Point({index:1, name:"P-2", parent:this.name, left:500, top:175, fill:this.color, stroke:this.color, lockMovementY: true})
+        new Point({index:0, name:"P-1", parent:this.name, left:175, top:175, fill:this.color, stroke:this.color, lockMovementY: true, canvas:canvas}),
+        new Point({index:1, name:"P-2", parent:this.name, left:500, top:175, fill:this.color, stroke:this.color, lockMovementY: true, canvas:canvas})
         ];      
     }
     Shape.prototype.Draw = function () {
@@ -485,7 +332,7 @@ var Shape = /** @class */ (function () {
             });
             this.lines = [line.name];
             dlines[line.name] = line;
-            this.vcanvas.canvas.add(line);
+            canvas.add(line);
         }
         else {
             this.x = (this.points[0].left + this.points[2].left) / 2;
@@ -500,7 +347,7 @@ var Shape = /** @class */ (function () {
                         { name: "line"+i, parent: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls:false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor }); 
                 }
                 dlines[line.name] = line;
-                this.vcanvas.canvas.add(line);
+                canvas.add(line);
             }
 
             var arrLine = [];
@@ -563,22 +410,22 @@ var Shape = /** @class */ (function () {
                 path.set({strokeWidth: 1});
             }
         }
-        this.vcanvas.canvas.add(path);
+        canvas.add(path);
     };
     Shape.prototype.Rename = function (newName) {
         var oldName = this.name;
         this.name = newName;
         for (var i = 0; i < this.points.length; i++) {
             this.points[i].parent = newName;
-            var p = this.canvas.getItem(this.points[i].name, oldName);
-            this.vcanvas.canvas.remove(p);
+            var p = canvas.getItem(this.points[i].name, oldName);
+            canvas.remove(p);
         }
         for (var j = 0; j < this.lines.length; j++) {
-            var line = this.canvas.getItem(this.lines[j], oldName);
-            this.vcanvas.canvas.remove(line);
+            var line = canvas.getItem(this.lines[j], oldName);
+            canvas.remove(line);
         }
-        var label = this.canvas.getItem("lb-" + oldName);
-        this.vcanvas.canvas.remove(label);
+        var label = canvas.getItem("lb-" + oldName);
+        canvas.remove(label);
         this.Draw();
         return this;
     };
@@ -646,7 +493,7 @@ var Shape = /** @class */ (function () {
         this.points.push(p);
         this.points.sort(this.compare);
         this.Draw();
-        this.vcanvas.canvas.renderAll();
+        canvas.renderAll();
     };
     Shape.prototype.compare = function(a, b){
         const indexA = a.index;
@@ -660,7 +507,7 @@ var Shape = /** @class */ (function () {
         return comparison;
     };
     Shape.prototype.Remove = function () {  
-        var objs = this.canvas.getItem('',this.name); 
+        var objs = canvas.getItem('',this.name); 
         objs.forEach(function(o){this.vcanvas.canvas.remove(o);});
     };
     Shape.prototype.RemovePoint = function (name){

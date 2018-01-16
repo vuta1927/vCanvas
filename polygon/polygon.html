@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>test</title>
+	<link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+	<script src="js/jquery-2.1.1.min.js"></script>
+	<!-- <script src="http://fabricjs.com/lib/fabric_with_gestures.js"></script> -->
+	<script type="text/javascript" src="js/fabric.js"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css" integrity="sha384-Zug+QiDoJOrZ5t4lssLdxGhVrurbmBWopoEl+M6BdEfwnCJZtKxi1KgxUyJq13dy" crossorigin="anonymous">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/js/bootstrap.min.js" integrity="sha384-a5N7Y/aK3qNeh15eJKGWxsqtnX/wWdSZSKp+81YjTmS15nvnvxKHuzaWwXHDli+4" crossorigin="anonymous"></script>
+	<!-- <script type="text/javascript" src="https://netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js" ></script> -->
+	<!-- <link rel="stylesheet" id="themeStyles" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css"/> -->
+	<style type="text/css">
+	#wrapper{
+		overflow:hidden;
+	}
+	#canvas{
+		/*border: 1px solid black;	*/
+		border: 1px solid black;
+	}
+	.table-editable { position: relative; }
+	.glyphicon { font-size: 20px; }
+	.table-remove {
+		color: #700;
+		cursor: pointer;
+	}
+	.table-remove:hover { color: #f00; }
+	.point-remove {
+		color: #700;
+		cursor: pointer;
+	}
+	.point-remove:hover { color: #f00; }
+
+	.showDetail{
+		cursor: pointer;
+	}
+	.showDetail:hover {
+		color: #700;
+		cursor: pointer;
+	}
+	.hideDetail{
+		cursor: pointer;
+	}
+	.hideDetail:hover {
+		color: #700;
+		cursor: pointer;
+	}
+	.table-add-point{
+		cursor: pointer;	
+	}
+	.table-add-point:hover { color: #f00; }
+	.table-remove-point{
+		cursor: pointer;	
+	}
+	.table-remove-point:hover { color: #f00; }
+	div{ padding-top: 5px; }
+	@media screen and (max-width:991px) {
+		#pakete .box {
+			overflow:auto;
+			min-width:0;
+			width:100%
+		}
+		#pakete .box table {
+			width:950px;
+		}
+		.rotate {
+			margin:0!important;
+			position:absolute;
+			top:100px!important;
+			left:auto!important;
+			right:-150px!important;
+			width:200px!important;
+		}
+		.front {
+			position:relative;
+			width:950px;
+			padding-right:200px;
+		}
+	}
+
+	.switch {
+		position: relative;
+		display: inline-block;
+	}
+
+	.switch input {display:none;}
+
+	.slider {
+		width: 25px;
+		height: 10px;
+		position: absolute;
+		cursor: pointer;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: #ccc;
+		-webkit-transition: .4s;
+		transition: .4s;
+	}
+
+	.slider:before {
+		position: absolute;
+		content: "";
+		height: 6px;
+		width: 9px;
+		left: 2px;
+		bottom: 2px;
+		background-color: white;
+		-webkit-transition: .4s;
+		transition: .4s;
+	}
+
+	input:checked + .slider {
+		background-color: #2196F3;
+	}
+
+	input:focus + .slider {
+		box-shadow: 0 0 1px #2196F3;
+	}
+
+	input:checked + .slider:before {
+		-webkit-transform: translateX(13px);
+		-ms-transform: translateX(13px);
+		transform: translateX(13px);
+	}
+
+	.slider.round {
+		border-radius: 12px;
+	}
+
+	.slider.round:before {
+		border-radius: 50%;
+	}
+	</style>
+</head>
+<body>
+	<div class="container-fluid">
+		<div class="row">
+			<!-- Modal -->
+			<div class="modal fade" id="myModal" role="dialog">
+				<div class="modal-dialog">
+					<div class="modal-content">
+						<div class="modal-header">
+							
+							<h5 class="modal-title">Change background</h5>
+							<button type="button" class="close" data-dismiss="modal">&times;</button>
+						</div>
+						<div class="modal-body">
+							<p>Image url:</p><p id="modalError" class="text-danger"></p>
+							<textarea id="txtImgUrl" style="width: 100%; height:100px"></textarea>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-primary" id="btnChangeBackgroundSave">Save</button>
+							<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-9 col-xs-12">
+				<div class="col-md-12 col-xs-12">
+					<button  class="btn btn-sm btn-primary" id="btnAddRect" ><i class="fa fa-plus"></i> Add Rect</button> 
+					<button class="btn btn-sm" id="btnZoomIn"><i class="fa fa-search-plus"></i> Zoom in</button>
+					<button class="btn btn-sm" id="btnZoomOut"><i class="fa fa-search-minus"></i> Zoom out</button>
+					<button class="btn btn-sm btn-default" id="btnResetZoom"><i class="fa fa-history"></i> Reset zoom</button>
+					<button class="btn btn-sm btn-default" id="btnAddBackground" data-toggle="modal" data-target="#myModal"><i class="fa fa-file-image-o"></i> Change background</button>
+					<label class="lblNote" style="padding-left: 20px; color: red;" id="lblNote"></label>
+					<input type="text" name="txtName" id="txtName" hidden="true" width="10">
+					<input type="text" name="txtData" id="txtData" hidden="true" width="10">
+				</div>
+				<div class="col-xs-12 col-md-12">
+					<div id="wrapper">
+						<canvas id="canvas"></canvas>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-sm-3 col-xs-12">
+				
+				<div class="col-sm-12">
+					<button class="btn btn-sm btn-success" id="btnExport"><i class="fa fa-cloud-upload"></i> Export</button>
+					<button class="btn btn-sm btn-success" id="btnLoad"><i class="fa fa-cloud-download"></i> Load</button>
+				</div>
+				<div class="col-sm-12">
+					<div id="table" class="table-editable">
+						<table class="tblShape table table-hover table-sm text-center">
+							<thead>
+								<tr>
+									<th>#</th>
+									<th>Name</th>
+									<th>Type</th>
+									<th></th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script type="text/javascript" src="js/vtCanvas.js"></script>
+	<script type="text/javascript" src="js/polygon.js"></script>
+</body>
+</html>

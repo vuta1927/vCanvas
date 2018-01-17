@@ -1,7 +1,8 @@
 var vCanvas;
 $(window).load(function(){
-	vCanvas = new vcanvas({parent: 'wrapper'});
-	vCanvas.init();
+	vCanvas = new vcanvas({parent: 'wrapper', tableParent:'table'});
+	var JsonTest = '{"parent":"wrapper","tableParent":"table","backgroundUrl":null,"Shapes":[{"index":1,"name":"Rect-1","type":"rect","points":[{"index":0,"name":"P-1","parent":"Rect-1","left":791,"top":158,"radius":5,"fill":"#5aa4c8","strokeWidth":1,"stroke":"#5aa4c8","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":1,"name":"P-2","parent":"Rect-1","left":966,"top":158,"radius":5,"fill":"#5aa4c8","strokeWidth":1,"stroke":"#5aa4c8","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":2,"name":"P-3","parent":"Rect-1","left":966,"top":283,"radius":5,"fill":"#5aa4c8","strokeWidth":1,"stroke":"#5aa4c8","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":3,"name":"P-4","parent":"Rect-1","left":791,"top":283,"radius":5,"fill":"#5aa4c8","strokeWidth":1,"stroke":"#5aa4c8","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":4,"name":"P-5","parent":"Rect-1","left":605.7142857142858,"top":293.9807549962991,"radius":5,"fill":"#5aa4c8","strokeWidth":1,"stroke":"#5aa4c8","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0}],"color":"#5aa4c8","isMoving":false,"hoverCursor":"pointer","x":878.5,"y":220.5,"lines":["line0","line1","line2","line3","line4"],"lbX":796,"lbY":128,"AddPointMode":false},{"index":2,"name":"Line-1","type":"line","points":[{"index":0,"name":"P-1","parent":"Line-1","left":175,"top":175,"radius":5,"fill":"#59cb0d","strokeWidth":1,"stroke":"#59cb0d","hoverCursor":"pointer","lockMovementX":true,"lockMovementY":false,"lbX":0,"lbY":0},{"index":1,"name":"P-2","parent":"Line-1","left":175,"top":500,"radius":5,"fill":"#59cb0d","strokeWidth":1,"stroke":"#59cb0d","hoverCursor":"pointer","lockMovementX":true,"lockMovementY":false,"lbX":0,"lbY":0}],"color":"#59cb0d","isMoving":false,"hoverCursor":"pointer","lines":["Line-1"],"lbX":180,"lbY":145,"AddPointMode":false},{"index":3,"name":"Rect-2","type":"rect","points":[{"index":0,"name":"P-1","parent":"Rect-2","left":384,"top":246,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":1,"name":"P-2","parent":"Rect-2","left":559,"top":246,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":2,"name":"P-3","parent":"Rect-2","left":695.7142857142859,"top":369.61658031088086,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":3,"name":"P-4","parent":"Rect-2","left":559,"top":371,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":4,"name":"P-5","parent":"Rect-2","left":384,"top":371,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0}],"color":"#890806","isMoving":false,"hoverCursor":"pointer","x":539.8571428571429,"y":307.80829015544043,"lines":["line0","line1","line2","line3","line4"],"lbX":389,"lbY":216,"AddPointMode":false}],"units":70,"startX":0,"startY":0,"tempPoint":null,"LineHovered":null,"ActiveObject":{"index":3,"name":"Rect-2","type":"rect","points":[{"index":0,"name":"P-1","parent":"Rect-2","left":384,"top":246,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":1,"name":"P-2","parent":"Rect-2","left":559,"top":246,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":2,"name":"P-3","parent":"Rect-2","left":695.7142857142859,"top":369.61658031088086,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":3,"name":"P-4","parent":"Rect-2","left":559,"top":371,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0},{"index":4,"name":"P-5","parent":"Rect-2","left":384,"top":371,"radius":5,"fill":"#890806","strokeWidth":1,"stroke":"#890806","hoverCursor":"pointer","lockMovementX":false,"lockMovementY":false,"lbX":0,"lbY":0}],"color":"#890806","isMoving":false,"hoverCursor":"pointer","x":539.8571428571429,"y":307.80829015544043,"lines":["line0","line1","line2","line3","line4"],"lbX":389,"lbY":216,"AddPointMode":false},"prevSelected":null,"url":"http://demo111.websieuviet.com/file/pic/newsletter/2016/04/e28a8b1cb936c443d2d1cde95483e92201179.jpg","background":{"url":"http://demo111.websieuviet.com/file/pic/newsletter/2016/04/e28a8b1cb936c443d2d1cde95483e92201179.jpg","width":1920,"height":1080},"panning":false,"isDrawing":false,"isMouseDown":false,"AddPointMode":false}';
+	vCanvas.init({js:JsonTest});
 	$('#btnChangeBackgroundSave').click(function(){
 		url = $('#txtImgUrl').val();
 		if(url){
@@ -17,17 +18,14 @@ $(window).load(function(){
 	})
 	$('#btnAddRect').click(function(){
 		vCanvas.Add({type:"rect"});
-		loadDataToTable();
 	});
 
 	$('#btnAddVerticalLine').click(function(){
 		vCanvas.Add({type:"verticalLine"});
-		loadDataToTable();
 	});
 
 	$('#btnAddHorizontalLine').click(function(){
 		vCanvas.Add({type:"horizontalLine"});
-		loadDataToTable();
 	});
 
 	$('#btnDrawLine').click(function(){
@@ -35,7 +33,7 @@ $(window).load(function(){
 	});
 	$('#btnExport').click(function(){
 		var js = vCanvas.ToJson();
-        console.log(js);
+		console.log(js);
 		$('#txtData').val(js);
 	});
 	$('#btnResetZoom').click(function(){
@@ -52,213 +50,10 @@ $(window).load(function(){
 		var js = $("#txtData").val();
 		vCanvas.init({js});
 	});
-	
 
-	$(vCanvas.canvas.wrapperEl).on('mousewheel', function (e) {
-		var delta = e.originalEvent.wheelDelta / 500;
-		var pointer = vCanvas.canvas.getPointer(e.e);
-            // console.log(e.offsetX, e.offsetY);
-            var currentWidth = vCanvas.canvas.getWidth();
-            var currentHeight = vCanvas.canvas.getHeight();
-            console.log(vCanvas.canvas.getWidth(), vCanvas.canvas.getHeight());
-            if (delta > 0 ) {
-            	vCanvas.canvas.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), vCanvas.canvas.getZoom() * 1.1);
-            }
-            if (delta < 0 ){
-            	vCanvas.canvas.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), vCanvas.canvas.getZoom() / 1.1);
-            }
-            return false;
-        });
-	if (vCanvas.canvas.width != $("#" + vCanvas.parent).width()) {
-		var scaleMultiplier = $("#" + vCanvas.parent).width() / vCanvas.canvas.width;
-		var objects = vCanvas.canvas.getObjects();
-
-		vCanvas.canvas.setWidth(vCanvas.canvas.getWidth() * scaleMultiplier);
-		vCanvas.canvas.setHeight(vCanvas.canvas.getHeight() * scaleMultiplier);
-		vCanvas.canvas.renderAll();
-		vCanvas.canvas.calcOffset();
-	}
-	$(window).resize(function (){
-		if (vCanvas.canvas.width != $("#" + vCanvas.parent).width()) {
-			var scaleMultiplier = $("#" + vCanvas.parent).width() / vCanvas.canvas.width;
-			var objects = vCanvas.canvas.getObjects();
-
-			vCanvas.canvas.setWidth(vCanvas.canvas.getWidth() * scaleMultiplier);
-			vCanvas.canvas.setHeight(vCanvas.canvas.getHeight() * scaleMultiplier);
-			vCanvas.canvas.renderAll();
-			vCanvas.canvas.calcOffset();
-		}
-	});
-	vCanvas.canvas.on({
-		'mouse:down': function (o) {
-			var pointer = vCanvas.canvas.getPointer(o.e);
-			x0 = pointer.x;
-			y0 = pointer.y;
-			if (o.e.type == "touchstart"){
-				startX = o.e.touches[0].pageX;
-				startY = o.e.touches[0].pageY;  
-			}
-
-			if((o.e.type === 'touchmove') && (o.e.touches.length > 1)) { return; }
-			if (vCanvas.isDrawing) {
-				vCanvas.canvas.defaultCursor = "pointer";
-				vCanvas.isMouseDown = true;
-				var pointer = vCanvas.canvas.getPointer(o.e);
-				var result = vCanvas.randomName("line");
-
-				var A = new Point({index: 0, name:"P-1", parent:result.name, left:pointer.x, top:pointer.y, canvas:vCanvas.canvas});
-				var B = new Point({index: 1, name:"P-2", parent:result.name, left:pointer.x, top:pointer.y, canvas:vCanvas.canvas});
-				var line = new Shape({name:result.name, index: result.index, type:"line", points:[A, B], canvas:vCanvas.canvas});
-				line.Draw();
-				vCanvas.ActiveObject = line;
-			} else if (vCanvas.AddPointMode){
-				var newPoint = new Point({left:x0, top:y0});
-				vCanvas.ActiveObject.AddPoint(newPoint);
-			}else {
-				var obj = o.target;
-				if (!obj || obj.get('type') === "image") {
-					vCanvas.panning = true;
-                    // canvas.defaultCursor = "all-scroll";
-                    var allObject = vCanvas.canvas.getObjects();
-                    for (var i = 0; i < allObject.length; i++) {
-                    	if (allObject[i].get('type') === "circle") {
-                    		allObject[i].set({ radius: 5 });
-                    	}
-                    }
-                }
-            }
-        },
-        'mouse:move': function (o) {
-        	if (vCanvas.isMouseDown && vCanvas.isDrawing) {
-        		var pointer = vCanvas.canvas.getPointer(o.e);
-        		vCanvas.ActiveObject.Remove();
-        		for (var i = 0; i < vCanvas.ActiveObject.points.length; i++) {
-        			if (vCanvas.ActiveObject.points[i].name === "P-2"){
-        				vCanvas.ActiveObject.points[i].left = pointer.x;
-        				vCanvas.ActiveObject.points[i].top = pointer.y;
-        			}
-        		}
-        		vCanvas.ActiveObject.Draw();
-                //line.set({ x2: pointer.x, y2: pointer.y });
-                vCanvas.canvas.renderAll();
-            }
-            if (vCanvas.panning && o && o.e) {
-            	if (o.e.type !== "touchmove"){
-            		var delta = new fabric.Point(o.e.movementX, o.e.movementY);
-            		vCanvas.canvas.relativePan(delta);
-            	}else{
-            		var delta = new fabric.Point((o.e.touches[0].pageX - startX)/10, (o.e.touches[0].pageY - startY)/10);
-            		vCanvas.canvas.relativePan(delta);
-            	}
-            }
-        },
-        'mouse:over': function (e) {
-        	var c = e.target;
-        	if (c){
-        		if ( c.get('type') == "image") {
-        			c.set({ hoverCursor: "default" });
-        		}
-        	}
-        },
-        'mouse:out': function(e){
-        	if(vCanvas.tempPoint)
-        	{
-        		vCanvas.canvas.remove(vCanvas.tempPoint);
-        		vCanvas.tempPoint = null;
-        		vCanvas.LineHovered = null;
-        	}
-        }
-        ,
-        'mouse:up': function (o) {
-        	if (vCanvas.isDrawing) {
-        		vCanvas.ActiveObject.Remove();
-        		vCanvas.ActiveObject.Draw();
-        		vCanvas.Shapes.push(vCanvas.ActiveObject);
-        		vCanvas.canvas.renderAll();
-        	}
-        	if(vCanvas.ActiveObject){
-        		vCanvas.ActiveObject.isMoving = false;
-        	}
-        	loadDataToTable();
-        	vCanvas.panning = false;
-        	vCanvas.isDrawing = false;
-        	vCanvas.isMouseDown = false;
-        },
-        'object:moving': function(e) {
-        	var p = e.target;
-        	var pointer = vCanvas.canvas.getPointer(e.e);
-        	var allObject = vCanvas.canvas.getObjects();
-        	if (p.name.split('-')[0] === "i") {
-        		for (var i = 0; i < vCanvas.Shapes.length; i++) {
-        			if (p.parent === vCanvas.Shapes[i].name) {
-        				vCanvas.ActiveObject = vCanvas.Shapes[i];
-        				vCanvas.Shapes[i].Move({offsetX:e.e.movementX, offsetY: e.e.movementY});
-        				break;
-        			}
-        		}
-        	} 
-        	else {
-        		for (var i = 0; i < vCanvas.Shapes.length; i++) {
-        			if (p.parent === vCanvas.Shapes[i].name) {
-        				vCanvas.Shapes[i].Move({point: p});
-        				break;
-        			}
-        		}
-        	}
-        	vCanvas.canvas.renderAll();
-        }});
-$('.tblShape').on("blur","tr",function(e){
-	var allObject = vCanvas.canvas.getObjects();
-	for (var i = 0; i < allObject.length; i++) {
-		if (allObject[i].get('type') === "circle") {
-			allObject[i].set({ strokeWidth: 1 });
-		}
-	}
 });
 
-$('.tblShape').on('click', 'span', function (e) {
-	var name = this.parentElement.parentElement.cells[1].firstChild.value;
-	vCanvas.Remove(name);
-});
-});
 
-function loadDataToTable() {
-	var context = "";
-	parentElement = null;
-	for (var i = 0; i < vCanvas.Shapes.length; i++) {
-		if (vCanvas.Shapes[i].type == "line")
-		{
-			context += '<tr><td><i class="showDetail fa fa-plus" style="font-size:10pt" onclick="ShowShapeDetail(this,event);"></i></td><td class="name"><input id="name" onclick="onInputClicked(this);" type="text" size="5" style="border:none" onchange="textChange(this,this.value);" onkeypress="return ValidateKey();" value="' + vCanvas.Shapes[i].name
-			+'" /></td><td>'+vCanvas.Shapes[i].type+'</td><td></td><td><span class="table-remove fa fa-trash-o"></span></td></tr>' +
-			'<tr hidden="true" ><td colspan="4"><table style="background-color:#fff" class="tblShapeDetail table table-bordered"><thead><tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td></tr></thead><tbody>';
-			vCanvas.Shapes[i].points.forEach(function(p){
-				var x = Math.round(p.left);//Math.round((p.left /vCanvas.background.width)* 100);
-				var y = Math.round(p.top);//Math.round((p.top / vCanvas.background.height)* 100);
-				context += '<tr onclick="showPointDetail(this);"><td hidden="true">'+vCanvas.Shapes[i].name+'</td><td>'+p.name+'</td><td>'+ x +'</td><td>'+ y +'</td></tr>';
-			});
-			context += '</tbody></table></td></tr>';
-		}else{
-			context += '<tr><td><i class="showDetail fa fa-plus" style="font-size:10pt" onclick="ShowShapeDetail(this,event);"></i></td><td><input id="name" size="5" type="text" style="border:none" onclick="onInputClicked(this);" onchange="textChange(this,this.value);" onkeypress="return ValidateKey();" value="' + vCanvas.Shapes[i].name
-			+'" /></td><td>'+vCanvas.Shapes[i].type+'</td><td style="width:50px">';
-			if (vCanvas.Shapes[i].AddPointMode){
-				context +='<label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="switchAddPoint" onchange="onChangeAddPoint(this);" type="checkbox" checked><span class="slider round"></span></label>';
-			}else{
-				context +='<label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="switchAddPoint" onchange="onChangeAddPoint(this);" type="checkbox" ><span class="slider round"></span></label>';
-			}
-			context += '</td><td><span class="table-remove fa fa-trash-o" onclick="onRemoveShapeClicked(this);"></span></td></tr>' +
-			'<tr hidden="true" ><td colspan="4"><table style="background-color:#fff" class="tblShapeDetail table table-bordered"><thead><tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td><td>#</td></tr></thead><tbody>';
-			vCanvas.Shapes[i].points.forEach(function(p){
-				var x = Math.round(p.left);//Math.round((p.left /imgWidth)* 100);
-				var y = Math.round(p.top);//Math.round((p.top / imgHeight)* 100);
-				context += '<tr onclick="showPointDetail(this);"><td hidden="true">'+vCanvas.Shapes[i].name+'</td><td>'+p.name+'</td><td>'+ x +'</td><td>'+ y +'</td><td><span class="point-remove fa fa-eraser" onclick="onPointRemoveClick(this);"></span></td></tr>';
-			});
-			context += '</tbody></table></td></tr>';
-		}
-	}
-	$('#table tr').not(function(){ return !!$(this).has('th').length; }).remove();
-
-	$('#table tr:last').after(context);
-}
 function ValidateKey(){
 	var key=window.event.keyCode;
 	var allowed='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-.0123456789';
@@ -350,15 +145,6 @@ function onInputClicked(e){
 		vCanvas.canvas.renderAll();
 	}
 }
-
-function show(element, event){
-	element.firstChild.hidden = false;
-	element.lastChild.hidden = false;
-}
-function hide(element, event){
-	element.firstChild.hidden = true;
-	element.lastChild.hidden = true;
-}
 function onChangeAddPoint(e) {
 	var name = e.parentElement.parentElement.parentElement.cells[1].firstChild.value;
 	if(e.checked)
@@ -372,7 +158,7 @@ function onChangeAddPoint(e) {
 				vCanvas.Shapes[i].AddPointMode = false;
 			}
 		}
-		loadDataToTable();
+		vCanvas.loadDataToTable();
 		$('.lblNote').text("Click on canvas where you want to add point!");
 	}else{
 		vCanvas.AddPointMode =false;
@@ -389,13 +175,13 @@ function onPointRemoveClick(e){
 	var name = e.parentElement.parentElement.cells[1].innerText;
 	var obj = vCanvas.Get(parent);
 	obj.RemovePoint(name);
-	loadDataToTable();
+	vCanvas.loadDataToTable();
 }
 
 function onRemoveShapeClicked(e){
 	var name = e.parentElement.parentElement.cells[1].firstChild.value;
 	vCanvas.Remove(name);
-	loadDataToTable();
+	vCanvas.loadDataToTable();
 }
 function textChange(element, newValue) {
 	var oldvalue = element.defaultValue;

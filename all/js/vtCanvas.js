@@ -4,6 +4,7 @@ var vcanvas = /** @class */ (function () {
         var properties = $.extend({
             //these are the defaults
             parent: null,
+            tableParent: null,
             backgroundUrl: null,
             Shapes: [],
             isDrawing: false,
@@ -15,9 +16,11 @@ var vcanvas = /** @class */ (function () {
             startX: 0,
             startY: 0,
             tempPoint: null,
-            LineHovered: null
+            LineHovered: null,
+            prevSelected: null,
         }, params);
         this.parent = properties.parent;
+        this.tableParent = properties.tableParent;
         this.backgroundUrl = properties.backgroundUrl;
         this.Shapes = properties.Shapes;
         this.units = properties.units;
@@ -26,6 +29,7 @@ var vcanvas = /** @class */ (function () {
         this.tempPoint = properties.tempPoint;
         this.LineHovered = properties.LineHovered;
         this.ActiveObject = properties.ActiveObject;
+        this.prevSelected = properties.prevSelected;
     }
     vcanvas.prototype.init = function(params){
         var properties = $.extend({
@@ -40,12 +44,16 @@ var vcanvas = /** @class */ (function () {
 
         if (!this.canvas){
             this.canvas  = new fabric.Canvas('canvas', {selection: false,controlsAboveOverlay:false});
+
+            fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
+            fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
         }
         if(json){
             this.Shapes = [];
             var RawData = JSON.parse(json);
             this.backgroundUrl = RawData.background.url;
             this.parent = RawData.parent;
+            this.tableParent = RawData.tableParent;
             var element = $("#"+this.parent).length;
             if(!element){
                 $("#" + this.parent).append('<canvas id="canvas"></canvas>');    
@@ -53,6 +61,9 @@ var vcanvas = /** @class */ (function () {
             
             if (!this.canvas){
                 this.canvas  = new fabric.Canvas('canvas', {selection: false,controlsAboveOverlay:false});
+
+                fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
+                fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
             }
             for (var i = 0; i < RawData.Shapes.length; i++) {
                 var newShape = new Shape({
@@ -81,11 +92,380 @@ var vcanvas = /** @class */ (function () {
                 this.Shapes.push(newShape);
                 newShape.Draw();
             }
-        }   
-        fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
-        fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
+        }
         this.LoadBackground(this.backgroundUrl);
+        this.initEvent();
+        this.initTable();
+        this.loadDataToTable();
         return vcanvas;
+    };
+    vcanvas.prototype.initEvent = function(){
+        var c = this.canvas;
+        var mother = this;
+        $(c.wrapperEl).on('mousewheel', function (e) {
+            var delta = e.originalEvent.wheelDelta / 500;
+            var pointer = c.getPointer(e.e);
+            var currentWidth = c.getWidth();
+            var currentHeight = c.getHeight();
+            if (delta > 0 ) {
+                c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), c.getZoom() * 1.1);
+            }
+            if (delta < 0 ){
+                c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), c.getZoom() / 1.1);
+            }
+            return false;
+        });
+        if (c.width != $("#" + mother.parent).width()) {
+            var scaleMultiplier = $("#" + mother.parent).width() / c.width;
+            var objects = c.getObjects();
+
+            c.setWidth(c.getWidth() * scaleMultiplier);
+            c.setHeight(c.getHeight() * scaleMultiplier);
+            c.renderAll();
+            c.calcOffset();
+        }
+        $(window).resize(function (){
+            if (c.width != $("#" + mother.parent).width()) {
+                var scaleMultiplier = $("#" + mother.parent).width() / c.width;
+                var objects = c.getObjects();
+
+                c.setWidth(c.getWidth() * scaleMultiplier);
+                c.setHeight(c.getHeight() * scaleMultiplier);
+                c.renderAll();
+                c.calcOffset();
+            }
+        });
+        c.on({
+            'mouse:down': function (o) {
+                var pointer = c.getPointer(o.e);
+                x0 = pointer.x;
+                y0 = pointer.y;
+                if (o.e.type == "touchstart"){
+                    startX = o.e.touches[0].pageX;
+                    startY = o.e.touches[0].pageY;  
+                }
+
+                if((o.e.type === 'touchmove') && (o.e.touches.length > 1)) { return; }
+                if (mother.isDrawing) {
+                    c.defaultCursor = "pointer";
+                    mother.isMouseDown = true;
+                    var pointer = c.getPointer(o.e);
+                    var result = mother.randomName("line");
+
+                    var A = new Point({index: 0, name:"P-1", parent:result.name, left:pointer.x, top:pointer.y, canvas:c});
+                    var B = new Point({index: 1, name:"P-2", parent:result.name, left:pointer.x, top:pointer.y, canvas:c});
+                    var line = new Shape({name:result.name, index: result.index, type:"line", points:[A, B], canvas:c});
+                    line.Draw();
+                    mother.ActiveObject = line;
+                } else if (mother.AddPointMode){
+                    var newPoint = new Point({left:x0, top:y0});
+                    mother.ActiveObject.AddPoint(newPoint);
+                }else {
+                    var obj = o.target;
+                    if (!obj || obj.get('type') === "image") {
+                        mother.panning = true;
+                    // canvas.defaultCursor = "all-scroll";
+                    var allObject = c.getObjects();
+                    for (var i = 0; i < allObject.length; i++) {
+                        if (allObject[i].get('type') === "circle") {
+                            allObject[i].set({ radius: 5 });
+                        }
+                    }
+                }
+            }
+        },
+        'mouse:move': function (o) {
+            if (mother.isMouseDown && mother.isDrawing) {
+                var pointer = c.getPointer(o.e);
+                mother.ActiveObject.Remove();
+                for (var i = 0; i < mother.ActiveObject.points.length; i++) {
+                    if (mother.ActiveObject.points[i].name === "P-2"){
+                        mother.ActiveObject.points[i].left = pointer.x;
+                        mother.ActiveObject.points[i].top = pointer.y;
+                    }
+                }
+                mother.ActiveObject.Draw();
+                //line.set({ x2: pointer.x, y2: pointer.y });
+                c.renderAll();
+            }
+            if (mother.panning && o && o.e) {
+                if (o.e.type !== "touchmove"){
+                    var delta = new fabric.Point(o.e.movementX, o.e.movementY);
+                    c.relativePan(delta);
+                }else{
+                    var delta = new fabric.Point((o.e.touches[0].pageX - startX)/10, (o.e.touches[0].pageY - startY)/10);
+                    c.relativePan(delta);
+                }
+            }
+        },
+        'mouse:over': function (e) {
+            var obj = e.target;
+            if (obj){
+                if ( obj.get('type') == "image") {
+                    obj.set({ hoverCursor: "default" });
+                }
+            }
+        },
+        'mouse:out': function(e){
+            if(mother.tempPoint)
+            {
+                c.remove(mother.tempPoint);
+                mother.tempPoint = null;
+                mother.LineHovered = null;
+            }
+        }
+        ,
+        'mouse:up': function (o) {
+            if (mother.isDrawing) {
+                mother.ActiveObject.Remove();
+                mother.ActiveObject.Draw();
+                mother.Shapes.push(mother.ActiveObject);
+                mother.canvas.renderAll();
+            }
+            if(mother.ActiveObject){
+                mother.ActiveObject.isMoving = false;
+            }
+            mother.loadDataToTable();
+            mother.panning = false;
+            mother.isDrawing = false;
+            mother.isMouseDown = false;
+        },
+        'object:moving': function(e) {
+            var p = e.target;
+            var pointer = c.getPointer(e.e);
+            var allObject = c.getObjects();
+            if (p.name.split('-')[0] === "i") {
+                for (var i = 0; i < mother.Shapes.length; i++) {
+                    if (p.parent === mother.Shapes[i].name) {
+                        mother.ActiveObject = mother.Shapes[i];
+                        mother.Shapes[i].Move({offsetX:e.e.movementX, offsetY: e.e.movementY});
+                        break;
+                    }
+                }
+            } 
+            else {
+                for (var i = 0; i < mother.Shapes.length; i++) {
+                    if (p.parent === mother.Shapes[i].name) {
+                        mother.Shapes[i].Move({point: p});
+                        break;
+                    }
+                }
+            }
+            mother.canvas.renderAll();
+        }});
+};
+vcanvas.prototype.initTable = function(){
+    var eTable = $('#tblShape').length;
+    if(!eTable){
+        $("#" + this.tableParent).append('<table class="tblShape table table-hover table-sm text-center"><thead><tr><th>#</th><th>Name</th><th>Type</th><th></th><th></th></tr></thead><tbody></tbody></table>');    
+    }
+}
+vcanvas.prototype.loadDataToTable = function() {
+    var mother = this;
+    var context = "";
+    parentElement = null;
+    for (var i = 0; i < mother.Shapes.length; i++) {
+        if (mother.Shapes[i].type == "line")
+        {
+            context += '<tr><td><i class="showDetail fa fa-plus" style="font-size:10pt" onclick="ShowShapeDetail(this,event);"></i></td><td class="name"><input id="name" onclick="onInputClicked(this);" type="text" size="5" style="border:none" onchange="textChange(this,this.value);" onkeypress="return ValidateKey();" value="' + mother.Shapes[i].name
+            +'" /></td><td>'+mother.Shapes[i].type+'</td><td></td><td><span class="table-remove fa fa-trash-o"></span></td></tr>' +
+            '<tr hidden="true" ><td colspan="4"><table style="background-color:#fff" class="tblShapeDetail table table-bordered"><thead><tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td></tr></thead><tbody>';
+            mother.Shapes[i].points.forEach(function(p){
+                var x = (mother.background.width)? parseFloat((p.left /mother.background.width)* 100).toFixed(2):parseFloat(p.left).toFixed(2);
+                var y = (mother.background.height)? parseFloat((p.top / mother.background.height)* 100).toFixed(2):parseFloat(p.top).toFixed(2);
+                context += '<tr onclick="showPointDetail(this);"><td hidden="true">'+mother.Shapes[i].name+'</td><td>'+p.name+'</td><td>'+ x +'</td><td>'+ y +'</td></tr>';
+            });
+            context += '</tbody></table></td></tr>';
+        }else{
+            context += '<tr><td><i class="showDetail fa fa-plus" style="font-size:10pt" onclick="ShowShapeDetail(this,event);"></i></td><td><input id="name" size="5" type="text" style="border:none" onclick="onInputClicked(this);" onchange="textChange(this,this.value);" onkeypress="return ValidateKey();" value="' + mother.Shapes[i].name
+            +'" /></td><td>'+mother.Shapes[i].type+'</td><td style="width:50px">';
+            if (mother.Shapes[i].AddPointMode){
+                context +='<label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="switchAddPoint" onchange="onChangeAddPoint(this);" type="checkbox" checked><span class="slider round"></span></label>';
+            }else{
+                context +='<label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="switchAddPoint" onchange="onChangeAddPoint(this);" type="checkbox" ><span class="slider round"></span></label>';
+            }
+            context += '</td><td><span class="table-remove fa fa-trash-o" onclick="onRemoveShapeClicked(this);"></span></td></tr>' +
+            '<tr hidden="true" ><td colspan="4"><table style="background-color:#fff" class="tblShapeDetail table table-bordered"><thead><tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td><td>#</td></tr></thead><tbody>';
+            mother.Shapes[i].points.forEach(function(p){
+                var x = (mother.background.width)? parseFloat((p.left /mother.background.width)* 100).toFixed(2):parseFloat(p.left).toFixed(2);
+                var y = (mother.background.height)? parseFloat((p.top / mother.background.height)* 100).toFixed(2):parseFloat(p.top).toFixed(2);
+                context += '<tr onclick="showPointDetail(this);"><td hidden="true">'+mother.Shapes[i].name+'</td><td>'+p.name+'</td><td>'+ x +'</td><td>'+ y +'</td><td><span class="point-remove fa fa-eraser" onclick="onPointRemoveClick(this);"></span></td></tr>';
+            });
+            context += '</tbody></table></td></tr>';
+        }
+    }
+    var test = $('#'+this.tableParent+' tr');
+    var test2 = $('#'+this.tableParent+' tr:last');
+    $('#'+this.tableParent+' tr').not(function(){ return !!$(this).has('th').length; }).remove();
+    $('#'+this.tableParent+' tr:last').after(context);
+
+};
+vcanvas.prototype.initTableEvent = function(){
+    var mother = this;
+    $('.tblShape').on("blur","tr",function(e){
+        var allObject = mother.canvas.getObjects();
+        for (var i = 0; i < allObject.length; i++) {
+            if (allObject[i].get('type') === "circle") {
+                allObject[i].set({ strokeWidth: 1 });
+            }
+        }
+    });
+
+    $('.tblShape').on('click', 'span', function (e) {
+        var name = this.parentElement.parentElement.cells[1].firstChild.value;
+        mother.Remove(name);
+    });
+}
+vcanvas.prototype.ValidateKey = function(){
+    var key=window.event.keyCode;
+    var allowed='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-.0123456789';
+    return allowed.indexOf(String.fromCharCode(key)) !=-1 ;
+}
+vcanvas.prototype.ShowShapeDetail = function(element, event){
+    if (!this.prevSelected){
+        element.className = "hideDetail fa fa-minus";   
+        this.prevSelected = element;
+        element.parentElement.parentElement.nextElementSibling.hidden=false;
+    }else{
+        var prevId = this.prevSelected.className.split(' ')[0];
+        var currId = element.className.split(' ')[0];
+        if (prevId === currId === "showDetail"){
+            this.prevSelected.parentElement.parentElement.hidden=true;
+            this.prevSelected.className = "showDetail fa fa-plus";
+
+            element.className = "hideDetail fa fa-minus";   
+            this.prevSelected = element;
+            element.parentElement.parentElement.nextElementSibling.hidden=false;    
+        }else if(prevId === currId === "hideDetail"){
+            this.prevSelected.parentElement.parentElement.hidden=true;
+            this.prevSelected.className = "showDetail fa fa-plus";
+
+            element.className = "hideDetail fa fa-plus";    
+            this.prevSelected = null;
+            element.parentElement.parentElement.nextElementSibling.hidden=true; 
+        }
+        else if (prevId !== currId){
+            if(currId === "showDetail"){
+                element.className = "hideDetail fa fa-minus";   
+                this.prevSelected = element;
+                element.parentElement.parentElement.nextElementSibling.hidden=false;    
+            }else{
+                element.className = "showDetail fa fa-plus";    
+                this.prevSelected = null;
+                element.parentElement.parentElement.nextElementSibling.hidden=true; 
+            }
+        }else{
+            this.prevSelected = element;
+            if (currId === "hideDetail"){
+                element.className = "showDetail fa fa-plus";    
+                element.parentElement.parentElement.nextElementSibling.hidden=true; 
+            }
+            else{
+                element.className = "hideDetail fa fa-minus";   
+                element.parentElement.parentElement.nextElementSibling.hidden=false;    
+            }
+        }
+    }
+};
+vcanvas.prototype.showPointDetail = function(e){
+        // console.log('td clicked');
+        var name = e.cells[0].innerText;
+        var pname = e.cells[1].innerText;
+        var allObject = vCanvas.canvas.getObjects();
+        for (var i = 0; i < allObject.length; i++) {
+            if (allObject[i].get('type') === "circle") {
+                allObject[i].set({ radius: 5 });
+            }
+        }
+        var point = vCanvas.canvas.getItem(pname, name);
+        point.set({radius: 15});
+        vCanvas.canvas.renderAll();
+    };
+    vcanvas.prototype.onInputClicked = function(e){
+        var name = e.value;
+        var points = [];
+        var allObject = vCanvas.canvas.getObjects();
+        for (var i = 0; i < allObject.length; i++) {
+            if (allObject[i].get('type') === "circle") {
+                allObject[i].set({ radius: 5 });
+            }
+        }
+        for (var i = 0; i < vCanvas.Shapes.length; i++) {
+            if (vCanvas.Shapes[i].name === name) {
+                for (var j = 0; j < vCanvas.Shapes[i].points.length; j++) {
+                    var p = vCanvas.canvas.getItem(vCanvas.Shapes[i].points[j].name, vCanvas.Shapes[i].name);
+                    p && points.push(p);
+                }
+                break;
+            }
+        }
+        if (points.length > 0) {
+            for (var i = 0; i < points.length; i++) {
+                points[i].set({radius: 15});
+            }
+            vCanvas.canvas.renderAll();
+        }
+    };
+    vcanvas.prototype.onChangeAddPoint = function(e) {
+        var name = e.parentElement.parentElement.parentElement.cells[1].firstChild.value;
+        if(e.checked)
+        {
+            for(var i=0; i < vCanvas.Shapes.length; i++){
+                if(vCanvas.Shapes[i].name === name){
+                    vCanvas.AddPointMode = true;
+                    vCanvas.ActiveObject = vCanvas.Shapes[i];
+                    vCanvas.Shapes[i].AddPointMode = true;
+                }else{
+                    vCanvas.Shapes[i].AddPointMode = false;
+                }
+            }
+            this.loadDataToTable();
+            $('.lblNote').text("Click on canvas where you want to add point!");
+        }else{
+            vCanvas.AddPointMode =false;
+            $('.lblNote').text("");
+            for(var i=0; i < vCanvas.Shapes.length; i++){
+                if (vCanvas.Shapes[i].name === name){
+                    vCanvas.Shapes[i].AddPointMode = false;
+                }
+            }
+        }
+    };
+    vcanvas.prototype.onPointRemoveClick = function(e){
+        var parent = e.parentElement.parentElement.cells[0].innerText;
+        var name = e.parentElement.parentElement.cells[1].innerText;
+        var obj = vCanvas.Get(parent);
+        obj.RemovePoint(name);
+        this.loadDataToTable();
+    };
+    vcanvas.prototype.onRemoveShapeClicked = function(e){
+        var name = e.parentElement.parentElement.cells[1].firstChild.value;
+        vCanvas.Remove(name);
+        this.loadDataToTable();
+    };
+    vcanvas.prototype.textChange = function(element, newValue) {
+        var oldvalue = element.defaultValue;
+        var isExsit = false;
+        if (newValue !== oldvalue) {
+            var obj = vCanvas.Get(newValue);
+            if (obj){
+                isExsit = true;
+            }
+            if(!isExsit){
+                var object = vCanvas.Get(oldvalue);
+                if (object) {
+                    var newShape = object.Rename(newValue);
+                    vCanvas.Remove(object);
+                    vCanvas.Shapes.push(newShape);
+                    element.defaultValue = newValue;
+                }
+            }
+            else{
+                alert("Name already exsit !");
+                element.value = oldvalue;
+            }
+        }
+        console.log(newValue);
     };
     vcanvas.prototype.ToJson = function () {
         var temp = Object.assign({},this);
@@ -100,8 +480,7 @@ var vcanvas = /** @class */ (function () {
         var js = JSON.stringify(temp, this.replacer);
         return js;
     };
-    vcanvas.prototype.replacer = function(key,value)
-    {
+    vcanvas.prototype.replacer = function(key,value){
         if (key=="canvas")
             return undefined;
         else 
@@ -126,6 +505,7 @@ var vcanvas = /** @class */ (function () {
         }
         newShape.Draw();
         this.Shapes.push(newShape);
+        this.loadDataToTable();
     };
     vcanvas.prototype.Get = function(object){
         var shape;
@@ -225,7 +605,7 @@ var vcanvas = /** @class */ (function () {
             o.Remove();
             this.Shapes.splice(this.Shapes.indexOf(object), 1);
         }
-        loadDataToTable();
+        this.loadDataToTable();
     };
     return vcanvas;
 }());

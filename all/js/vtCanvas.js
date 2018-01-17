@@ -255,7 +255,7 @@ var vcanvas = /** @class */ (function () {
         }});
 };
 vcanvas.prototype.initTable = function(){
-    var eTable = $('#tblShape').length;
+    var eTable = $('.tblShape').length;
     if(!eTable){
         $("#" + this.tableParent).append('<table class="tblShape table table-hover table-sm text-center"><thead><tr><th>#</th><th>Name</th><th>Type</th><th></th><th></th></tr></thead><tbody></tbody></table>');    
     }
@@ -268,7 +268,7 @@ vcanvas.prototype.loadDataToTable = function() {
         if (mother.Shapes[i].type == "line")
         {
             context += '<tr><td><i class="showDetail fa fa-plus" style="font-size:10pt" onclick="ShowShapeDetail(this,event);"></i></td><td class="name"><input id="name" onclick="onInputClicked(this);" type="text" size="5" style="border:none" onchange="textChange(this,this.value);" onkeypress="return ValidateKey();" value="' + mother.Shapes[i].name
-            +'" /></td><td>'+mother.Shapes[i].type+'</td><td></td><td><span class="table-remove fa fa-trash-o"></span></td></tr>' +
+            +'" /></td><td>'+mother.Shapes[i].type+'</td><td></td><td><span class="table-remove fa fa-trash-o" onclick="onRemoveShapeClicked(this);"></span></td></tr>' +
             '<tr hidden="true" ><td colspan="4"><table style="background-color:#fff" class="tblShapeDetail table table-bordered"><thead><tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td></tr></thead><tbody>';
             mother.Shapes[i].points.forEach(function(p){
                 var x = (mother.background.width)? parseFloat((p.left /mother.background.width)* 100).toFixed(2):parseFloat(p.left).toFixed(2);
@@ -1022,9 +1022,9 @@ var Shape = /** @class */ (function () {
         var type = "convex";
         
         for(var i=0; i<this.points.length;i++){
-           var p1 = this.points[i];
-           var p2;
-           if (p1.index === this.points.length - 1){
+         var p1 = this.points[i];
+         var p2;
+         if (p1.index === this.points.length - 1){
             p2 = this.points[0];
         }else{
             p2 = this.points[i + 1];

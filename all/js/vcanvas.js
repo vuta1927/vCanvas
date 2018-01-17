@@ -1,4 +1,3 @@
-var canvas;
 var vcanvas = /** @class */ (function () {
     function vcanvas(params) {
         var properties = $.extend({
@@ -770,10 +769,10 @@ var Shape = /** @class */ (function () {
                 var line;
                 if (i !== (this.points.length - 1)){
                     line = new fabric.Line([this.points[i].left, this.points[i].top, this.points[i + 1].left, this.points[i + 1].top], 
-                        { name: "line"+i, parent: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls:false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor }); 
+                        { name: "line"+i, parent: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls:false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor}); 
                 }else{
                     line = new fabric.Line([this.points[i].left, this.points[i].top, this.points[0].left, this.points[0].top], 
-                        { name: "line"+i, parent: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls:false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor }); 
+                        { name: "line"+i, parent: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls:false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor}); 
                 }
                 dlines[line.name] = line;
                 this.canvas.add(line);
@@ -831,14 +830,14 @@ var Shape = /** @class */ (function () {
         });
         pathDirection += ' z';
         var path = new fabric.Path(pathDirection);
-        path.set({name: 'i-'+this.name, parent: this.name, opacity: 0, hasControls:false, hasBorders: false, hasRotatingPoint: false});
-        if (this.type === "line"){
-            if(this.points[0].lockMovementY || this.points[0].lockMovementX){
-                path.set({strokeWidth: 5});    
-            }else{
-                path.set({strokeWidth: 1});
-            }
+        path.set({name: 'i-'+this.name, parent: this.name, opacity: 0.005, hasControls:false, hasBorders: false, hasRotatingPoint: false});
+        if(this.type==='rect'){
+            path.set({perPixelTargetFind:true});
         }
+        // if (this.type === "line" || this.type === "verticalLine" || this.type === "horizontalLine"){
+        //     path.set({strokeWidth: 5});    
+            
+        // }
         this.canvas.add(path);
     };
     Shape.prototype.Rename = function (newName) {

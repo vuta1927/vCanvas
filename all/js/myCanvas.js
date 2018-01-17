@@ -4,11 +4,14 @@
         var properties = $.extend({
             json: null,
             parent: null,
+            backgroundUrl: null,
+            type: null
         },params);
         var json = properties.json;
         var parentId = properties.parent;
-
-        var newCanvas = new vcanvas({ id: GenerateId(), parent: parentId, js: json });
+        var backgroundUrl = properties.backgroundUrl;
+        var type = properties.type;
+        var newCanvas = new vcanvas({ id: GenerateId(), type: type, parent: parentId, backgroundUrl:backgroundUrl, js: json });
         canvasCollection.push(newCanvas);
         return newCanvas.id; 
     }
@@ -26,34 +29,13 @@
         canvasCollection: canvasCollection
     };
 })();
-// var myCanvas = (function () {
-//     function myCanvas(params) {
-//         var properties = $.extend({
-//             canvasCollection: []
-//         }, params);
-//         this.canvasCollection = properties.canvasCollection;
-//     }
-//     myCanvas.prototype.Create = function (json) {
-//         var newCanvas = new vcanvas({ id: this.GenerateId(), js: json });
-//         this.canvasCollection.push(newCanvas);
-//         return newCanvas.id;
-//     }
-//     myCanvas.prototype.GenerateId = function () {
-//         var index = 0;
-//         this.canvasCollection.forEach(function (obj) {
-//             index++;
-//         });
-//         return `vcanvas-${index}`;
-//     }
-//     return myCanvas;
-// }())
 var vcanvas = /** @class */ (function () {
     function vcanvas(params) {
         var properties = $.extend({
             //these are the defaults
             id: null,
             parent: null,
-            tableParent: null,
+            type: null,
             backgroundUrl: null,
             Shapes: [],
             isDrawing: false,
@@ -71,7 +53,7 @@ var vcanvas = /** @class */ (function () {
         }, params);
         this.id = properties.id;
         this.parent = properties.parent;
-        this.tableParent = properties.tableParent;
+        this.type = properties.type;
         this.backgroundUrl = properties.backgroundUrl;
         this.Shapes = properties.Shapes;
         this.units = properties.units;
@@ -98,6 +80,7 @@ var vcanvas = /** @class */ (function () {
         this.btnZoomOutId = this.id + '-btnZoomOut';
         this.btnResetZoomId = this.id + '-btnResetZoom';
         this.btnAddBackgroundId = this.id + '-btnAddBackground';
+        this.btnExportId = this.id + '-btnExport';
         this.lblNoteId = this.id + '-lblNote';
         this.txtNameId = this.id + '-txtName';
         this.txtDataId = this.id + '-txtData';
@@ -119,19 +102,19 @@ var vcanvas = /** @class */ (function () {
     vcanvas.prototype.init = function () {
         this.initId();
         this.initCss();
-        this.htmlRender();
-        if (!this.canvas) {
-            this.canvas = new fabric.Canvas(this.id + '-canvas', { selection: false, controlsAboveOverlay: false });
-            fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
-            fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
-        }
+        
         var json = this.js;
         if (json) {
             this.Shapes = [];
             var RawData = JSON.parse(json);
             this.backgroundUrl = RawData.background.url;
             this.parent = RawData.parent;
-            this.tableParent = RawData.tableParent;
+            this.htmlRender();
+            if (!this.canvas) {
+                this.canvas = new fabric.Canvas(this.id + '-canvas', { selection: false, controlsAboveOverlay: false });
+                fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
+                fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
+            }
             for (var i = 0; i < RawData.Shapes.length; i++) {
                 var newShape = new Shape({
                     name: RawData.Shapes[i].name,
@@ -159,6 +142,12 @@ var vcanvas = /** @class */ (function () {
                 this.Shapes.push(newShape);
                 newShape.Draw();
             }
+        }else{
+            this.htmlRender();}
+        if (!this.canvas) {
+            this.canvas = new fabric.Canvas(this.id + '-canvas', { selection: false, controlsAboveOverlay: false });
+            fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
+            fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
         }
         this.LoadBackground(this.backgroundUrl);
         this.initEvent();
@@ -387,10 +376,12 @@ var vcanvas = /** @class */ (function () {
                     </div>
                     <div class="col-sm-9 col-xs-12">
                         <div class="col-md-12 col-xs-12">
-                            <button  class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button> 
+                            ${(!this.type || this.type=='polygon'||this.type=="all")?`<button  class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>`:``}
+                            ${(!this.type ||this.type=='line'||this.type=="all")?`
                             <button class="btn btn-sm btn-success" id="${this.btnAddVerticalLineId}"><i class="fa fa-arrows-v"></i> Add vertical line</button>
                             <button class="btn btn-sm btn-success" id="${this.btnAddHorizontalLineId}"><i class="fa fa-arrows-h"></i> Add horizontal line</button>
                             <button class="btn btn-sm btn-danger" id="${this.btnDrawLineId}"><i class="fa fa-pencil"></i> Draw line</button>
+                            `:``}
                         </div>
                         <div class="col-md-12 col-xs-12">
                             <button class="btn btn-sm" id="${this.btnZoomInId}"><i class="fa fa-search-plus"></i> Zoom in</button>
@@ -409,6 +400,9 @@ var vcanvas = /** @class */ (function () {
                     </div>
 
                     <div class="col-sm-3 col-xs-12">
+                        <div class="col-sm-12">
+                        <button class="btn btn-sm btn-success" id="${this.btnExportId}"><i class="fa fa-cloud-download"></i> Export to JSON</button>
+                        </div>
                         <div class="col-sm-12">
                             <div id="${this.tableWrapperId}" class="table-editable">
                             <table id="${this.tableId}" class="tblShape table table-hover table-sm text-center">

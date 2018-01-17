@@ -12,63 +12,13 @@
 </head>
 <body>
 	<div class="container-fluid">
-		<div class="row">
-			<!-- Modal -->
-			<div class="modal fade" id="myModal" role="dialog">
-				<div class="modal-dialog">
-					<div class="modal-content">
-						<div class="modal-header">
-							<h5 class="modal-title">Change background</h5>
-							<button type="button" class="close" data-dismiss="modal">&times;</button>
-						</div>
-						<div class="modal-body">
-							<p>Image url:</p><p id="modalError" class="text-danger"></p>
-							<textarea id="txtImgUrl" style="width: 100%; height:100px"></textarea>
-						</div>
-						<div class="modal-footer">
-							<button type="button" class="btn btn-primary" id="btnChangeBackgroundSave">Save</button>
-							<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-sm-9 col-xs-12">
-				<div class="col-md-12 col-xs-12">
-					<button  class="btn btn-sm btn-primary" id="btnAddRect" ><i class="fa fa-plus"></i> Add Rect</button> 
-					<button class="btn btn-sm btn-success" id="btnAddVerticalLine"><i class="fa fa-arrows-v"></i> Add vertical line</button>
-					<button class="btn btn-sm btn-success" id="btnAddHorizontalLine"><i class="fa fa-arrows-h"></i> Add horizontal line</button>
-					<button class="btn btn-sm btn-danger" id="btnDrawLine"><i class="fa fa-pencil"></i> Draw line</button>
-				</div>
-				<div class="col-md-12 col-xs-12">
-					<button class="btn btn-sm" id="btnZoomIn"><i class="fa fa-search-plus"></i> Zoom in</button>
-					<button class="btn btn-sm" id="btnZoomOut"><i class="fa fa-search-minus"></i> Zoom out</button>
-					<button class="btn btn-sm btn-default" id="btnResetZoom"><i class="fa fa-history"></i> Reset zoom</button>
-					<button class="btn btn-sm btn-default" id="btnAddBackground" data-toggle="modal" data-target="#myModal"><i class="fa fa-file-image-o"></i> Change background</button>
-					<label class="lblNote" style="padding-left: 20px; color: red;" id="lblNote"></label>
-					<input type="text" name="txtName" id="txtName" hidden="true" width="10">
-					<input type="text" name="txtData" id="txtData" hidden="true" width="10">
-				</div>
-				<div class="col-xs-12 col-md-12">
-					<div id="wrapper">
-					</div>
-				</div>
-			</div>
-
-			<div class="col-sm-3 col-xs-12">
-				
-				<div class="col-sm-12">
-					<button class="btn btn-sm btn-success" id="btnExport"><i class="fa fa-cloud-upload"></i> Export</button>
-					<button class="btn btn-sm btn-success" id="btnLoad"><i class="fa fa-cloud-download"></i> Load</button>
-				</div>
-				<div class="col-sm-12">
-					<div id="table" class="table-editable">
-						
-					</div>
-				</div>
-			</div>
+		<div class="row" id="wrapperMain">
 		</div>
 	</div>
 	<script type="text/javascript" src="js/vcanvas.js"></script>
-	<script type="text/javascript" src="js/main.js"></script>
+	<script type="text/javascript">
+		var mCanvas = new myCanvas();
+		var c1 = mCanvas.Create();
+	</script>
 </body>
 </html>

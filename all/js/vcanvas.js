@@ -181,7 +181,7 @@ var vcanvas = /** @class */ (function () {
             $('#' + mother.btnZoomInId).click(function () {
                 mother.canvas.setZoom(mother.canvas.getZoom() * 1.1);
             })
-            $('#' + this.btnZoomOutId).click(function () {
+            $('#' + mother.btnZoomOutId).click(function () {
                 mother.canvas.setZoom(mother.canvas.getZoom() / 1.1);
             })
 
@@ -368,7 +368,7 @@ var vcanvas = /** @class */ (function () {
                             <button class="btn btn-sm" id="${this.btnZoomInId}"><i class="fa fa-search-plus"></i> Zoom in</button>
                             <button class="btn btn-sm" id="${this.btnZoomOutId}"><i class="fa fa-search-minus"></i> Zoom out</button>
                             <button class="btn btn-sm btn-default" id="${this.btnResetZoomId}"><i class="fa fa-history"></i> Reset zoom</button>
-                            <button class="btn btn-sm btn-default" id="${this.btnAddBackgroundId}" data-toggle="modal" data-target="#myModal"><i class="fa fa-file-image-o"></i> Change background</button>
+                            <button class="btn btn-sm btn-default" id="${this.btnAddBackgroundId}" data-toggle="modal" data-target="#${this.bgModalId}"><i class="fa fa-file-image-o"></i> Change background</button>
                             <label class="${this.lblNoteId}" style="padding-left: 20px; color: red;" id="${this.lblNoteId}"></label>
                             <input type="text" name="${this.txtNameId}" id="txtName" hidden="true" width="10">
                             <input type="text" name="${this.txtDataId}" id="txtData" hidden="true" width="10">

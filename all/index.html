@@ -11,13 +11,19 @@
 </head>
 <body>
 	<div class="container-fluid">
-		<div class="row" id="wrapperMain">
+		<div class="row" id="wrapperMain1">
+		</div>
+		<div class="row" id="wrapperMain2">
+		</div>
+		<div class="row" id="wrapperMain3">
 		</div>
 	</div>
-	<script type="text/javascript" src="js/vcanvas.js"></script>
+	<script type="text/javascript" src="js/myCanvas.js"></script>
 	<script type="text/javascript">
-		var mCanvas = new myCanvas();
-		var c1 = mCanvas.Create();
+		var c1 = myCanvas.Create({parent:"wrapperMain1"});
+		var c2 = myCanvas.Create({parent:"wrapperMain2"});
+		var c3 = myCanvas.Create({parent:"wrapperMain3"});
+		console.log(myCanvas.canvasCollection.length);
 	</script>
 </body>
 </html>

@@ -1,30 +1,58 @@
-var myCanvas = (function () {
-    function myCanvas(params) {
+(function(){
+    var canvasCollection = [];
+    function Create(params){
         var properties = $.extend({
-            canvasCollection: []
-        }, params);
-        this.canvasCollection = properties.canvasCollection;
+            json: null,
+            parent: null,
+        },params);
+        var json = properties.json;
+        var parentId = properties.parent;
+
+        var newCanvas = new vcanvas({ id: GenerateId(), parent: parentId, js: json });
+        canvasCollection.push(newCanvas);
+        return newCanvas.id; 
     }
-    myCanvas.prototype.Create = function (json) {
-        var newCanvas = new vcanvas({ id: this.GenerateId(), js: json });
-        this.canvasCollection.push(newCanvas);
-        return newCanvas.id;
-    }
-    myCanvas.prototype.GenerateId = function () {
+    function GenerateId(){
         var index = 0;
-        this.canvasCollection.forEach(function (obj) {
+        canvasCollection.forEach(function (obj) {
             index++;
         });
         return `vcanvas-${index}`;
     }
-    return myCanvas;
-}())
+
+    myCanvas = {
+        Create: Create,
+        GenerateId: GenerateId,
+        canvasCollection: canvasCollection
+    };
+})();
+// var myCanvas = (function () {
+//     function myCanvas(params) {
+//         var properties = $.extend({
+//             canvasCollection: []
+//         }, params);
+//         this.canvasCollection = properties.canvasCollection;
+//     }
+//     myCanvas.prototype.Create = function (json) {
+//         var newCanvas = new vcanvas({ id: this.GenerateId(), js: json });
+//         this.canvasCollection.push(newCanvas);
+//         return newCanvas.id;
+//     }
+//     myCanvas.prototype.GenerateId = function () {
+//         var index = 0;
+//         this.canvasCollection.forEach(function (obj) {
+//             index++;
+//         });
+//         return `vcanvas-${index}`;
+//     }
+//     return myCanvas;
+// }())
 var vcanvas = /** @class */ (function () {
     function vcanvas(params) {
         var properties = $.extend({
             //these are the defaults
             id: null,
-            parent: "wrapperMain",
+            parent: null,
             tableParent: null,
             backgroundUrl: null,
             Shapes: [],

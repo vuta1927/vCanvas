@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 	<title>test</title>
 	<link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
@@ -27,11 +26,13 @@
 	<script type="text/javascript" src="js/myCanvas.js"></script>
 	<script src="js/sample.js"></script>
 	<script type="text/javascript">
-		var c0 = myCanvas.Create({ parent: "wrapperMain0" });
-		var c1 = myCanvas.Create({ json: sample});
+		var c0 = myCanvas.Create({ parent: "wrapperMain0", json: sample});
+		console.log(c0.id);
+		var c1 = myCanvas.Create({ parent: "wrapperMain1", json: sample});
+		console.log(c1.id);
 		var c2 = myCanvas.Create({ parent: "wrapperMain2", type: "polygon" });
 		var c3 = myCanvas.Create({ parent: "wrapperMain3", type: "line" });
-		console.log(myCanvas.canvasCollection.length);
+		// console.log(c1.ToJson());
 	</script>
 </body>
 

@@ -13,7 +13,7 @@
         var type = properties.type;
         var newCanvas = new vcanvas({ id: GenerateId(), type: type, parent: parentId, backgroundUrl: backgroundUrl, js: json });
         canvasCollection.push(newCanvas);
-        return newCanvas.id;
+        return newCanvas;
     }
     function GenerateId() {
         var index = 0;
@@ -89,8 +89,8 @@ var vcanvas = /** @class */ (function () {
         this.canvasId = this.id + '-canvas';
         this.tableId = this.id + '-table';
         this.tableWrapperId = this.id + '-tableWrapper';
-        replaceValues.push('canvas', this.bgModalId, this.txtImgUrlId, this.modalErrorId,this.btnChangeBackgroundSaveId,
-        this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, this.btnDrawLineId, this.btnZoomInId,
+        replaceValues.push('canvas',this.id, this.bgModalId, this.txtImgUrlId, this.modalErrorId,this.btnChangeBackgroundSaveId,
+        this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, 'parent', this.btnDrawLineId, this.btnZoomInId,
         this.btnZoomOutId, this.btnResetZoomId,this.btnAddBackgroundId, this.btnExportId, this.lblNoteId, this.txtNameId,
         this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId);
     }
@@ -113,7 +113,6 @@ var vcanvas = /** @class */ (function () {
             this.Shapes = [];
             var RawData = JSON.parse(json);
             this.backgroundUrl = RawData.backgroundUrl? RawData.backgroundUrl : '';
-            this.parent = RawData.parent;
             this.htmlRender();
             if (!this.canvas) {
                 this.canvas = new fabric.Canvas(this.id + '-canvas', { selection: false, controlsAboveOverlay: false });

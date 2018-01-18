@@ -1,21 +1,21 @@
-(function(){
+(function () {
     var canvasCollection = [];
-    function Create(params){
+    function Create(params) {
         var properties = $.extend({
             json: null,
             parent: null,
             backgroundUrl: null,
             type: null
-        },params);
+        }, params);
         var json = properties.json;
         var parentId = properties.parent;
         var backgroundUrl = properties.backgroundUrl;
         var type = properties.type;
-        var newCanvas = new vcanvas({ id: GenerateId(), type: type, parent: parentId, backgroundUrl:backgroundUrl, js: json });
+        var newCanvas = new vcanvas({ id: GenerateId(), type: type, parent: parentId, backgroundUrl: backgroundUrl, js: json });
         canvasCollection.push(newCanvas);
-        return newCanvas.id; 
+        return newCanvas.id;
     }
-    function GenerateId(){
+    function GenerateId() {
         var index = 0;
         canvasCollection.forEach(function (obj) {
             index++;
@@ -30,6 +30,7 @@
     };
 })();
 var vcanvas = /** @class */ (function () {
+    var replaceValues = [];
     function vcanvas(params) {
         var properties = $.extend({
             //these are the defaults
@@ -52,7 +53,7 @@ var vcanvas = /** @class */ (function () {
             js: null
         }, params);
         this.id = properties.id;
-        this.parent = properties.parent;
+        this.parent = properties.parent; //id, ex: <div id='containner'>
         this.type = properties.type;
         this.backgroundUrl = properties.backgroundUrl;
         this.Shapes = properties.Shapes;
@@ -88,6 +89,10 @@ var vcanvas = /** @class */ (function () {
         this.canvasId = this.id + '-canvas';
         this.tableId = this.id + '-table';
         this.tableWrapperId = this.id + '-tableWrapper';
+        replaceValues.push('canvas', this.bgModalId, this.txtImgUrlId, this.modalErrorId,this.btnChangeBackgroundSaveId,
+        this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, this.btnDrawLineId, this.btnZoomInId,
+        this.btnZoomOutId, this.btnResetZoomId,this.btnAddBackgroundId, this.btnExportId, this.lblNoteId, this.txtNameId,
+        this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId);
     }
     vcanvas.prototype.initCss = function () {
         var style = document.createElement('style');
@@ -102,12 +107,12 @@ var vcanvas = /** @class */ (function () {
     vcanvas.prototype.init = function () {
         this.initId();
         this.initCss();
-        
+
         var json = this.js;
         if (json) {
             this.Shapes = [];
             var RawData = JSON.parse(json);
-            this.backgroundUrl = RawData.background.url;
+            this.backgroundUrl = RawData.backgroundUrl? RawData.backgroundUrl : '';
             this.parent = RawData.parent;
             this.htmlRender();
             if (!this.canvas) {
@@ -116,34 +121,35 @@ var vcanvas = /** @class */ (function () {
                 fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
             }
             for (var i = 0; i < RawData.Shapes.length; i++) {
+                var color = '#' + getRandomColor();
                 var newShape = new Shape({
                     name: RawData.Shapes[i].name,
                     type: RawData.Shapes[i].type,
-                    color: RawData.Shapes[i].color,
+                    color: color,
                     canvas: this.canvas
                 });
-                RawData.Shapes[i].points.forEach(function (p) {
+                for (var j = 0; j < RawData.Shapes[i].points.length; j++) {
+                    var p = RawData.Shapes[i].points[j];
                     newShape.points.push(new Point({
                         name: p.name,
-                        parent: p.parent,
+                        parentName: RawData.Shapes[i].name,
                         left: p.left,
                         top: p.top,
-                        radius: p.radius,
-                        fill: p.fill,
-                        strokeWidth: p.strokeWidth,
-                        stroke: p.stroke,
-                        lockMovementX: p.lockMovementX,
-                        lockMovementY: p.lockMovementY,
-                        index: p.index
+                        index: p.index,
+                        fill: color,
+                        stroke: color,
+                        lockMovementX: (RawData.Shapes[i].type === "verticalLine" || RawData.Shapes[i].type === "line") ? false : true,
+                        lockMovementY: (RawData.Shapes[i].type === "HorizontalLine" || RawData.Shapes[i].type === "line") ? false : true
                     }));
-                });
+                }
                 newShape.lbX = RawData.Shapes[i].lbX;
                 newShape.lbY = RawData.Shapes[i].lbY;
                 this.Shapes.push(newShape);
                 newShape.Draw();
             }
-        }else{
-            this.htmlRender();}
+        } else {
+            this.htmlRender();
+        }
         if (!this.canvas) {
             this.canvas = new fabric.Canvas(this.id + '-canvas', { selection: false, controlsAboveOverlay: false });
             fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
@@ -253,8 +259,8 @@ var vcanvas = /** @class */ (function () {
                     var pointer = c.getPointer(o.e);
                     var result = mother.randomName("line");
 
-                    var A = new Point({ index: 0, name: "P-1", parent: result.name, left: pointer.x, top: pointer.y, canvas: c });
-                    var B = new Point({ index: 1, name: "P-2", parent: result.name, left: pointer.x, top: pointer.y, canvas: c });
+                    var A = new Point({ index: 0, name: "P-1", parentName: result.name, left: pointer.x, top: pointer.y, canvas: c });
+                    var B = new Point({ index: 1, name: "P-2", parentName: result.name, left: pointer.x, top: pointer.y, canvas: c });
                     var line = new Shape({ name: result.name, index: result.index, type: "line", points: [A, B], canvas: c });
                     line.Draw();
                     mother.ActiveObject = line;
@@ -336,7 +342,7 @@ var vcanvas = /** @class */ (function () {
                 var allObject = c.getObjects();
                 if (p.name.split('-')[0] === "i") {
                     for (var i = 0; i < mother.Shapes.length; i++) {
-                        if (p.parent === mother.Shapes[i].name) {
+                        if (p.parentName === mother.Shapes[i].name) {
                             mother.ActiveObject = mother.Shapes[i];
                             mother.Shapes[i].Move({ offsetX: e.e.movementX, offsetY: e.e.movementY });
                             break;
@@ -345,7 +351,7 @@ var vcanvas = /** @class */ (function () {
                 }
                 else {
                     for (var i = 0; i < mother.Shapes.length; i++) {
-                        if (p.parent === mother.Shapes[i].name) {
+                        if (p.parentName === mother.Shapes[i].name) {
                             mother.Shapes[i].Move({ point: p });
                             break;
                         }
@@ -376,12 +382,12 @@ var vcanvas = /** @class */ (function () {
                     </div>
                     <div class="col-sm-9 col-xs-12">
                         <div class="col-md-12 col-xs-12">
-                            ${(!this.type || this.type=='polygon'||this.type=="all")?`<button  class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>`:``}
-                            ${(!this.type ||this.type=='line'||this.type=="all")?`
+                            ${(!this.type || this.type == 'polygon' || this.type == "all") ? `<button  class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>` : ``}
+                            ${(!this.type || this.type == 'line' || this.type == "all") ? `
                             <button class="btn btn-sm btn-success" id="${this.btnAddVerticalLineId}"><i class="fa fa-arrows-v"></i> Add vertical line</button>
                             <button class="btn btn-sm btn-success" id="${this.btnAddHorizontalLineId}"><i class="fa fa-arrows-h"></i> Add horizontal line</button>
                             <button class="btn btn-sm btn-danger" id="${this.btnDrawLineId}"><i class="fa fa-pencil"></i> Draw line</button>
-                            `:``}
+                            `: ``}
                         </div>
                         <div class="col-md-12 col-xs-12">
                             <button class="btn btn-sm" id="${this.btnZoomInId}"><i class="fa fa-search-plus"></i> Zoom in</button>
@@ -430,17 +436,17 @@ var vcanvas = /** @class */ (function () {
                     <i id="${mother.id + '-' + mother.tableId + '-' + s.name}" class="showDetail fa fa-plus" style="font-size:10pt"></i>
                 </td>
                 <td>
-                    <input id="${mother.id + '-' + s.index + '-input-' + s.name}"  type="text" size="5" style="border:none" value="${s.name}" />
+                    <input id="${mother.id + '-' + s.name + '-input-' + s.name}"  type="text" size="5" style="border:none" value="${s.name}" />
                 </td>
                 <td>
                     ${s.type}
                 </td>
                 <td style="width:50px">
                     ${(s.type == "rect") ? (s.AddPointMode ? `
-                <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.index + '-switch-' + s.name}" type="checkbox" checked><span class="slider round"></span></label>` : `
-                <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.index + '-switch-' + s.name}" type="checkbox" ><span class="slider round"></span></label>`) : ''}</td>
+                <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.name + '-switch-' + s.name}" type="checkbox" checked><span class="slider round"></span></label>` : `
+                <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.name + '-switch-' + s.name}" type="checkbox" ><span class="slider round"></span></label>`) : ''}</td>
                 <td>
-                    <span id="${mother.id + '-' + s.index + '-spanRemoveShape-' + s.name}" class="table-remove fa fa-trash-o"></span>
+                    <span id="${mother.id + '-' + s.name + '-spanRemoveShape-' + s.name}" class="table-remove fa fa-trash-o"></span>
                 </td>
             </tr>
             <tr hidden="true">
@@ -451,13 +457,13 @@ var vcanvas = /** @class */ (function () {
                         </thead>
                     <tbody>
                 ${s.points.map(p =>
-                `<tr id="${mother.id + '-' + s.index + '-tr-' + p.name}">
+                `<tr id="${mother.id + '-' + s.name + '-tr-' + p.name}">
                     <td  hidden="true">${s.name}</td>
                     <td>${p.name}</td>
                     <td>${(mother.background.width) ? parseFloat((p.left / mother.background.width) * 100).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
                     <td>${(mother.background.height) ? parseFloat((p.top / mother.background.height) * 100).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
                     ${s.type == 'rect' ? `
-                    <td><span id="${mother.id + '-' + s.index + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
+                    <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
                 </tr>`
             ).join('')}</tbody></table></td></tr>
             `)}`;
@@ -466,14 +472,14 @@ var vcanvas = /** @class */ (function () {
         $('#' + this.tableId + ' tr:last').after(context);
         mother.Shapes.forEach(function (s) {
             $('#' + mother.id + '-' + mother.tableId + '-' + s.name).click(function () { mother.ShowShapeDetail(s, mother.id + '-' + mother.tableId + '-' + s.name) });
-            $('#' + mother.id + '-' + s.index + '-input-' + s.name).click(function () { mother.onInputClicked(s) });
-            $('#' + mother.id + '-' + s.index + '-input-' + s.name).keypress(function () { return mother.ValidateKey() });
-            $('#' + mother.id + '-' + s.index + '-input-' + s.name).change(function () { mother.textChange(mother.id + '-' + s.index + '-input-' + s.name) });
-            $('#' + mother.id + '-' + s.index + '-switch-' + s.name).change(function () { mother.onChangeAddPoint(s, mother.id + '-' + s.index + '-switch-' + s.name) });
-            $('#' + mother.id + '-' + s.index + '-spanRemoveShape-' + s.name).click(function () { mother.onRemoveShapeClicked(s) });
+            $('#' + mother.id + '-' + s.name + '-input-' + s.name).click(function () { mother.onInputClicked(s) });
+            $('#' + mother.id + '-' + s.name + '-input-' + s.name).keypress(function () { return mother.ValidateKey() });
+            $('#' + mother.id + '-' + s.name + '-input-' + s.name).change(function () { mother.textChange(mother.id + '-' + s.name + '-input-' + s.name) });
+            $('#' + mother.id + '-' + s.name + '-switch-' + s.name).change(function () { mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name) });
+            $('#' + mother.id + '-' + s.name + '-spanRemoveShape-' + s.name).click(function () { mother.onRemoveShapeClicked(s) });
             s.points.forEach(function (p) {
-                $('#' + mother.id + '-' + s.index + '-tr-' + p.name).click(function () { mother.onPointTrclicked(p) });
-                $('#' + mother.id + '-' + s.index + '-spanRemovePoint-' + p.name).click(function () { mother.onPointRemoveClick(p) });
+                $('#' + mother.id + '-' + s.name + '-tr-' + p.name).click(function () { mother.onPointTrclicked(p) });
+                $('#' + mother.id + '-' + s.name + '-spanRemovePoint-' + p.name).click(function () { mother.onPointRemoveClick(p) });
             });
         });
     };
@@ -484,12 +490,12 @@ var vcanvas = /** @class */ (function () {
                 allObject[i].set({ radius: 5 });
             }
         }
-        var point = this.canvas.getItem(obj.name, obj.parent);
+        var point = this.canvas.getItem(obj.name, obj.parentName);
         point.set({ radius: 15 });
         this.canvas.renderAll();
     }
     vcanvas.prototype.onPointRemoveClick = function (obj) {
-        var obj = this.Get(obj.parent);
+        var obj = this.Get(obj.parentName);
         obj.RemovePoint(obj.name);
         this.loadDataToTable();
     }
@@ -625,25 +631,25 @@ var vcanvas = /** @class */ (function () {
         var allowed = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-.0123456789';
         return allowed.indexOf(String.fromCharCode(key)) != -1;
     }
-    vcanvas.prototype.ToJson = function () {
-        var temp = Object.assign({}, this);
-        temp.Shapes.forEach(function (s) {
-            s.canvas = undefined;
-            s.points.forEach(function (p) {
-                p.canvas = undefined;
-            })
-        });
-        temp.canvas = undefined;
-
-        var js = JSON.stringify(temp, this.replacer);
-        return js;
-    };
     vcanvas.prototype.replacer = function (key, value) {
-        if (key == "canvas")
+        // console.log(key, value);
+        if (replaceValues.indexOf(value) > -1 || replaceValues.indexOf(key) > -1)
             return undefined;
         else
             return value;
     };
+    vcanvas.prototype.ToJson = function () {
+        var temp = Object.assign({}, this);
+        this.RemoveProperties(temp);
+        var js = JSON.stringify(temp, this.replacer);
+        return js;
+    }
+    vcanvas.prototype.RemoveProperties = function (obj) {
+        replaceValues.push('background','ActiveObject','isDrawing','tempPoint','units','startX',
+            'startY','LineHovered','prevSelected','js', 'url', 'panning', 'isMouseDown', 'AddPointMode',
+            'isMoving', 'color','parentName', 'AddPointMode', 'lines', 'lbX', 'lbY', 'radius', 'fill', 'stroke', 'lockMovementX',
+            'lockMovementY', 'canvas', 'x', 'y');
+    }
     vcanvas.prototype.Add = function (params) {
         var properties = $.extend({
             name: null,
@@ -653,7 +659,7 @@ var vcanvas = /** @class */ (function () {
         var type = properties.type;
 
         var result = this.randomName(type);
-        var newShape = new Shape({ name: result.name, index: result.index, canvas: this.canvas });
+        var newShape = new Shape({ name: result.name, canvas: this.canvas });
         if (type === "rect") {
             newShape.Rect();
         } else if (type === "verticalLine") {
@@ -673,13 +679,8 @@ var vcanvas = /** @class */ (function () {
                     shape = s;
                 }
             });
-        } else if (isNaN(object)) {
-            this.Shapes.forEach(function (s) {
-                if (s.index === object.index) {
-                    shape = s;
-                }
-            });
-        }
+        } 
+        
         return shape;
     };
     vcanvas.prototype.randomName = function (type) {
@@ -707,18 +708,18 @@ var vcanvas = /** @class */ (function () {
         }
         return { name: name, index: index };
     };
-    vcanvas.prototype.getItem = function (name, parent) {
+    vcanvas.prototype.getItem = function (name, parentName) {
         var object = null, objects = this.canvas.getObjects();
         var os = [];
         for (var i = 0, len = this.canvas.size(); i < len; i++) {
-            if (parent) {
+            if (parentName) {
                 if (name) {
-                    if (objects[i].name && objects[i].name === name && objects[i].parent === parent) {
+                    if (objects[i].name && objects[i].name === name && objects[i].parentName === parentName) {
                         object = objects[i];
                         break;
                     }
                 } else {
-                    if (objects[i].parent === parent) {
+                    if (objects[i].parentName === parentName) {
                         os.push(objects[i]);
                     }
                 }
@@ -738,11 +739,11 @@ var vcanvas = /** @class */ (function () {
         }, params);
         var bgr = new Background();
         var c = this.canvas;
-        this.url = properties.url;
-        bgr.url = this.url;
+        this.backgroundUrl = properties.url;
+        bgr.url = this.backgroundUrl;
         var bgImg = this.getItem('background', null);
         this.canvas.remove(bgImg);
-        fabric.Image.fromURL(this.url, function (img) {
+        fabric.Image.fromURL(this.backgroundUrl, function (img) {
             img.selectable = false;
             img.set({ name: 'background', left: 0, top: 0 });
             bgr.height = img.height;
@@ -786,35 +787,25 @@ var Point = /** @class */ (function () {
             //these are the defaults
             index: null,
             name: null,
-            parent: null,
+            parentName: null,
             left: 0,
             top: 0,
-            radius: 5,
             fill: null,
             stroke: null,
-            strokeWidth: 1,
-            hoverCursor: 'pointer',
             lockMovementX: false,
             lockMovementY: false,
-            lbX: 0,
-            lbY: 0,
             canvas: null
 
         }, params);
         this.index = properties.index;
         this.name = properties.name;
-        this.parent = properties.parent;
+        this.parentName = properties.parentName;
         this.left = properties.left;
         this.top = properties.top;
-        this.radius = properties.radius;
         this.fill = properties.fill;
-        this.strokeWidth = properties.strokeWidth;
         this.stroke = properties.stroke;
-        this.hoverCursor = properties.hoverCursor;
         this.lockMovementX = properties.lockMovementX;
         this.lockMovementY = properties.lockMovementY;
-        this.lbX = properties.lbX;
-        this.lbY = properties.lbY;
         this.canvas = properties.canvas;
     }
     Point.prototype.Draw = function (c) {
@@ -822,12 +813,12 @@ var Point = /** @class */ (function () {
             left: this.left,
             top: this.top,
             fill: this.fill,
-            radius: this.radius,
-            strokeWidth: this.strokeWidth,
+            radius: 5,
+            strokeWidth: 1,
             stroke: "black",
             name: this.name,
-            parent: this.parent,
-            hoverCursor: this.hoverCursor
+            parentName: this.parentName,
+            hoverCursor: "pointer"
         });
         this.canvas = c;
         if (this.lockMovementX)
@@ -843,25 +834,21 @@ var Shape = /** @class */ (function () {
     function Shape(params) {
         var properties = $.extend({
             //these are the defaults
-            index: null,
             name: null,
             type: "rect",
             points: [],
             color: '#' + getRandomColor(),
-            hoverCursor: 'pointer',
             isMoving: false,
             lbX: 0,
             lbY: 0,
             AddPointMode: false,
             canvas: null
         }, params);
-        this.index = properties.index;
         this.name = properties.name;
         this.type = properties.type;
         this.points = properties.points;
         this.color = properties.color;
         this.isMoving = properties.isMoving;
-        this.hoverCursor = properties.hoverCursor;
         this.canvas = properties.canvas;
     };
     Shape.prototype.DrawLabel = function () {
@@ -875,34 +862,33 @@ var Shape = /** @class */ (function () {
             }
         }
         var label = new fabric.Text(this.name, {
-            name: "lb-" + this.name, parent: this.name, left: this.lbX, top: this.lbY,
+            name: "lb-" + this.name, parentName: this.name, left: this.lbX, top: this.lbY,
             fontSize: 20, fontFamily: "calibri", fill: this.color, hasRotatingPoint: false,
-            centerTransform: true, selectable: true, hoverCursor: this.hoverCursor
+            centerTransform: true, selectable: true
         });
         label.hasControls = label.hasBorders = false;
         this.canvas.add(label);
     };
     Shape.prototype.Rect = function () {
         this.type = 'rect';
-        this.points = [
-            new Point({ index: 0, name: "P-1", parent: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, canvas: this.canvas }),
-            new Point({ index: 1, name: "P-2", parent: this.name, left: 350, top: 175, fill: this.color, stroke: this.color, canvas: this.canvas }),
-            new Point({ index: 2, name: "P-3", parent: this.name, left: 350, top: 300, fill: this.color, stroke: this.color, canvas: this.canvas }),
-            new Point({ index: 3, name: "P-4", parent: this.name, left: 175, top: 300, fill: this.color, stroke: this.color, canvas: this.canvas })
-        ];
+        var p1 = new Point({ index: 0, name: "P-1", parentName: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, canvas: this.canvas });
+        var p2 = new Point({ index: 1, name: "P-2", parentName: this.name, left: 350, top: 175, fill: this.color, stroke: this.color, canvas: this.canvas });
+        var p3 = new Point({ index: 2, name: "P-3", parentName: this.name, left: 350, top: 300, fill: this.color, stroke: this.color, canvas: this.canvas });
+        var p4 = new Point({ index: 3, name: "P-4", parentName: this.name, left: 175, top: 300, fill: this.color, stroke: this.color, canvas: this.canvas });
+        this.points = [p1, p2, p3, p4];
     }
     Shape.prototype.VerticalLine = function () {
         this.type = 'line',
             this.points = [
-                new Point({ index: 0, name: "P-1", parent: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, lockMovementX: true, canvas: this.canvas }),
-                new Point({ index: 1, name: "P-2", parent: this.name, left: 175, top: 500, fill: this.color, stroke: this.color, lockMovementX: true, canvas: this.canvas })
+                new Point({ index: 0, name: "P-1", parentName: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, lockMovementX: true, canvas: this.canvas }),
+                new Point({ index: 1, name: "P-2", parentName: this.name, left: 175, top: 500, fill: this.color, stroke: this.color, lockMovementX: true, canvas: this.canvas })
             ];
     }
     Shape.prototype.HorizontalLine = function () {
         this.type = 'line';
         this.points = [
-            new Point({ index: 0, name: "P-1", parent: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, lockMovementY: true, canvas: this.canvas }),
-            new Point({ index: 1, name: "P-2", parent: this.name, left: 500, top: 175, fill: this.color, stroke: this.color, lockMovementY: true, canvas: this.canvas })
+            new Point({ index: 0, name: "P-1", parentName: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, lockMovementY: true, canvas: this.canvas }),
+            new Point({ index: 1, name: "P-2", parentName: this.name, left: 500, top: 175, fill: this.color, stroke: this.color, lockMovementY: true, canvas: this.canvas })
         ];
     }
     Shape.prototype.Draw = function () {
@@ -910,7 +896,7 @@ var Shape = /** @class */ (function () {
         if (this.type == "line" || this.type == "verticalLine" || this.type == "horizontalLine") {
             var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
                 name: this.name,
-                parent: this.name,
+                parentName: this.name,
                 strokeWidth: 2,
                 fill: this.color,
                 stroke: this.color,
@@ -929,10 +915,10 @@ var Shape = /** @class */ (function () {
                 var line;
                 if (i !== (this.points.length - 1)) {
                     line = new fabric.Line([this.points[i].left, this.points[i].top, this.points[i + 1].left, this.points[i + 1].top],
-                        { name: "line" + i, parent: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls: false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor });
+                        { name: "line" + i, parentName: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls: false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor });
                 } else {
                     line = new fabric.Line([this.points[i].left, this.points[i].top, this.points[0].left, this.points[0].top],
-                        { name: "line" + i, parent: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls: false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor });
+                        { name: "line" + i, parentName: this.name, fill: this.color, strokeWidth: 2, stroke: this.color, selectable: false, hasControls: false, hasBorders: false, hasRotatingPoint: false, hoverCursor: this.hoverCursor });
                 }
                 dlines[line.name] = line;
                 this.canvas.add(line);
@@ -965,10 +951,6 @@ var Shape = /** @class */ (function () {
         var point = properties.point;
         this.Remove();
         if (point) {
-            // if (point.get('type') === "text") {
-            //     this.lbX = point.left;
-            //     this.lbY = point.top;
-            // }
             for (var i = 0; i < this.points.length; i++) {
                 if (point.name === this.points[i].name) {
                     this.points[i].left = point.left;
@@ -990,7 +972,7 @@ var Shape = /** @class */ (function () {
         });
         pathDirection += ' z';
         var path = new fabric.Path(pathDirection);
-        path.set({ name: 'i-' + this.name, parent: this.name, opacity: 0.005, hasControls: false, hasBorders: false, hasRotatingPoint: false });
+        path.set({ name: 'i-' + this.name, parentName: this.name, opacity: 0.005, hasControls: false, hasBorders: false, hasRotatingPoint: false });
         if (this.type === 'rect') {
             path.set({ perPixelTargetFind: true });
         }
@@ -1004,7 +986,7 @@ var Shape = /** @class */ (function () {
         var oldName = this.name;
         this.name = newName;
         for (var i = 0; i < this.points.length; i++) {
-            this.points[i].parent = newName;
+            this.points[i].parentName = newName;
             var p = this.canvas.getItem(this.points[i].name, oldName);
             this.canvas.remove(p);
         }
@@ -1074,7 +1056,7 @@ var Shape = /** @class */ (function () {
 
         p.name = name;
         p.index = index;
-        p.parent = this.name;
+        p.parentName = this.name;
         p.fill = this.color;
         p.stroke = this.color;
         p.canvas = this.canvas;
@@ -1275,18 +1257,18 @@ var Shape = /** @class */ (function () {
     };
     return Shape;
 }());
-vcanvas.prototype.getItem = function (name, parent) {
+vcanvas.prototype.getItem = function (name, parentName) {
     var object = null, objects = this.canvas.getObjects();
     var os = [];
     for (var i = 0, len = this.canvas.size(); i < len; i++) {
-        if (parent) {
+        if (parentName) {
             if (name) {
-                if (objects[i].name && objects[i].name === name && objects[i].parent === parent) {
+                if (objects[i].name && objects[i].name === name && objects[i].parentName === parentName) {
                     object = objects[i];
                     break;
                 }
             } else {
-                if (objects[i].parent === parent) {
+                if (objects[i].parentName === parentName) {
                     os.push(objects[i]);
                 }
             }
@@ -1309,18 +1291,18 @@ var pad = function (str, length) {
     return str;
 }
 var getRandomNum = function (min, max) { return Math.random() * (max - min) + min; }
-fabric.Canvas.prototype.getItem = function (name, parent) {
+fabric.Canvas.prototype.getItem = function (name, parentName) {
     var object = null, objects = this.getObjects();
     var os = [];
     for (var i = 0, len = this.size(); i < len; i++) {
-        if (parent) {
+        if (parentName) {
             if (name) {
-                if (objects[i].name && objects[i].name === name && objects[i].parent === parent) {
+                if (objects[i].name && objects[i].name === name && objects[i].parentName === parentName) {
                     object = objects[i];
                     break;
                 }
             } else {
-                if (objects[i].parent === parent) {
+                if (objects[i].parentName === parentName) {
                     os.push(objects[i]);
                 }
             }

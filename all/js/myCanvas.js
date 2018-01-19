@@ -1,3 +1,4 @@
+var types = { Rect: 100, Line: 200, HLine: 201, VLine: 202 };
 (function () {
     var canvasCollection = [];
     function Create(params) {
@@ -5,13 +6,13 @@
             json: null,
             parent: null,
             backgroundUrl: null,
-            type: null
+            types: []
         }, params);
         var json = properties.json;
         var parentId = properties.parent;
         var backgroundUrl = properties.backgroundUrl;
-        var type = properties.type;
-        var newCanvas = new vcanvas({ id: GenerateId(), type: type, parent: parentId, backgroundUrl: backgroundUrl, js: json });
+        var types = properties.types;
+        var newCanvas = new vcanvas({ id: GenerateId(), types: types, parent: parentId, backgroundUrl: backgroundUrl, js: json });
         canvasCollection.push(newCanvas);
         return newCanvas;
     }
@@ -22,7 +23,6 @@
         });
         return `vcanvas-${index}`;
     }
-
     myCanvas = {
         Create: Create,
         GenerateId: GenerateId,
@@ -30,13 +30,14 @@
     };
 })();
 var vcanvas = /** @class */ (function () {
+    var _triggers = {};
     var replaceValues = [];
     function vcanvas(params) {
         var properties = $.extend({
             //these are the defaults
             id: null,
             parent: null,
-            type: null,
+            types: [],
             backgroundUrl: null,
             Shapes: [],
             isDrawing: false,
@@ -54,7 +55,7 @@ var vcanvas = /** @class */ (function () {
         }, params);
         this.id = properties.id;
         this.parent = properties.parent; //id, ex: <div id='containner'>
-        this.type = properties.type;
+        this.types = properties.types;
         this.backgroundUrl = properties.backgroundUrl;
         this.Shapes = properties.Shapes;
         this.units = properties.units;
@@ -65,9 +66,9 @@ var vcanvas = /** @class */ (function () {
         this.ActiveObject = properties.ActiveObject;
         this.prevSelected = properties.prevSelected;
         this.js = properties.js;
-
         this.init(this.js);
     }
+
     vcanvas.prototype.initId = function () {
         this.bgModalId = this.id + '-modal';
         this.txtImgUrlId = this.id + '-txtImgUrl';
@@ -89,10 +90,10 @@ var vcanvas = /** @class */ (function () {
         this.canvasId = this.id + '-canvas';
         this.tableId = this.id + '-table';
         this.tableWrapperId = this.id + '-tableWrapper';
-        replaceValues.push('canvas',this.id, this.bgModalId, this.txtImgUrlId, this.modalErrorId,this.btnChangeBackgroundSaveId,
-        this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, 'parent', this.btnDrawLineId, this.btnZoomInId,
-        this.btnZoomOutId, this.btnResetZoomId,this.btnAddBackgroundId, this.btnExportId, this.lblNoteId, this.txtNameId,
-        this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId);
+        replaceValues.push('canvas', this.id, this.bgModalId, this.txtImgUrlId, this.modalErrorId, this.btnChangeBackgroundSaveId,
+            this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, 'parent', this.btnDrawLineId, this.btnZoomInId,
+            this.btnZoomOutId, this.btnResetZoomId, this.btnAddBackgroundId, this.btnExportId, this.lblNoteId, this.txtNameId,
+            this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId);
     }
     vcanvas.prototype.initCss = function () {
         var style = document.createElement('style');
@@ -107,12 +108,12 @@ var vcanvas = /** @class */ (function () {
     vcanvas.prototype.init = function () {
         this.initId();
         this.initCss();
-
         var json = this.js;
         if (json) {
             this.Shapes = [];
             var RawData = JSON.parse(json);
-            this.backgroundUrl = RawData.backgroundUrl? RawData.backgroundUrl : '';
+            this.types = RawData.types;
+            this.backgroundUrl = RawData.backgroundUrl ? RawData.backgroundUrl : '';
             this.htmlRender();
             if (!this.canvas) {
                 this.canvas = new fabric.Canvas(this.id + '-canvas', { selection: false, controlsAboveOverlay: false });
@@ -129,17 +130,31 @@ var vcanvas = /** @class */ (function () {
                 });
                 for (var j = 0; j < RawData.Shapes[i].points.length; j++) {
                     var p = RawData.Shapes[i].points[j];
-                    newShape.points.push(new Point({
+                    var newPoint = new Point({
                         name: p.name,
                         parentName: RawData.Shapes[i].name,
                         left: p.left,
                         top: p.top,
                         index: p.index,
                         fill: color,
-                        stroke: color,
-                        lockMovementX: (RawData.Shapes[i].type === "verticalLine" || RawData.Shapes[i].type === "line") ? false : true,
-                        lockMovementY: (RawData.Shapes[i].type === "HorizontalLine" || RawData.Shapes[i].type === "line") ? false : true
-                    }));
+                        stroke: color
+                        // lockMovementX:(RawData.Shapes[i].type === types.HLine)? false:true,
+                        // lockMovementY:(RawData.Shapes[i].type === types.VLine)? false: true
+                    });
+                    if (RawData.Shapes[i].type === types.HLine) {
+                        newPoint.lockMovementX = false;
+                        newPoint.lockMovementY = true;
+                    }
+
+                    else if (RawData.Shapes[i].type === types.VLine) {
+                        newPoint.lockMovementX = true;
+                        newPoint.lockMovementY = false;
+                    }
+                    else if (RawData.Shapes[i].type === types.Line || RawData.Shapes[i].type === types.Rect) {
+                        newPoint.lockMovementX = false;
+                        newPoint.lockMovementY = false;
+                    }
+                    newShape.points.push(newPoint);
                 }
                 newShape.lbX = RawData.Shapes[i].lbX;
                 newShape.lbY = RawData.Shapes[i].lbY;
@@ -159,10 +174,21 @@ var vcanvas = /** @class */ (function () {
         this.loadDataToTable();
         return vcanvas;
     };
+    vcanvas.prototype.on = function (event, callback) {
+        if (!_triggers[event])
+            _triggers[event] = [];
+        _triggers[event].push(callback);
+    }
+    vcanvas.prototype.triggerHandler = function (event, params) {
+        if (_triggers[event]) {
+            for (i in _triggers[event])
+                _triggers[event][i](params);
+        }
+    }
     vcanvas.prototype.initEvent = function () {
         var c = this.canvas;
         var mother = this;
-        $(window).load(function () {
+        $(window).on('load', function () {
             $('#' + mother.btnChangeBackgroundSaveId).click(function () {
                 url = $('#' + mother.txtImgUrlId).val();
                 if (url) {
@@ -177,15 +203,15 @@ var vcanvas = /** @class */ (function () {
 
             })
             $('#' + mother.btnAddRectId).click(function () {
-                mother.Add({ type: "rect" });
+                mother.Add({ type: types.Rect });
             });
 
             $('#' + mother.btnAddVerticalLineId).click(function () {
-                mother.Add({ type: "verticalLine" });
+                mother.Add({ type: types.VLine });
             });
 
             $('#' + mother.btnAddHorizontalLineId).click(function () {
-                mother.Add({ type: "horizontalLine" });
+                mother.Add({ type: types.HLine });
             });
 
             $('#' + mother.btnDrawLineId).click(function () {
@@ -256,11 +282,11 @@ var vcanvas = /** @class */ (function () {
                     c.defaultCursor = "pointer";
                     mother.isMouseDown = true;
                     var pointer = c.getPointer(o.e);
-                    var result = mother.randomName("line");
+                    var result = mother.randomName(types.Line);
 
                     var A = new Point({ index: 0, name: "P-1", parentName: result.name, left: pointer.x, top: pointer.y, canvas: c });
                     var B = new Point({ index: 1, name: "P-2", parentName: result.name, left: pointer.x, top: pointer.y, canvas: c });
-                    var line = new Shape({ name: result.name, index: result.index, type: "line", points: [A, B], canvas: c });
+                    var line = new Shape({ name: result.name, index: result.index, type: types.Line, points: [A, B], canvas: c });
                     line.Draw();
                     mother.ActiveObject = line;
                 } else if (mother.AddPointMode) {
@@ -326,6 +352,10 @@ var vcanvas = /** @class */ (function () {
                     mother.ActiveObject.Draw();
                     mother.Shapes.push(mother.ActiveObject);
                     mother.canvas.renderAll();
+                    mother.triggerHandler('CanvasModified',{
+                        event:'AddLine',
+                        source: mother.ActiveObject
+                    });
                 }
                 if (mother.ActiveObject) {
                     mother.ActiveObject.isMoving = false;
@@ -351,12 +381,17 @@ var vcanvas = /** @class */ (function () {
                 else {
                     for (var i = 0; i < mother.Shapes.length; i++) {
                         if (p.parentName === mother.Shapes[i].name) {
+                            mother.ActiveObject = mother.Shapes[i];
                             mother.Shapes[i].Move({ point: p });
                             break;
                         }
                     }
                 }
                 mother.canvas.renderAll();
+                mother.triggerHandler('CanvasModified',{
+                    event:'Moving',
+                    source: mother.ActiveObject
+                });
             }
         });
     };
@@ -381,12 +416,13 @@ var vcanvas = /** @class */ (function () {
                     </div>
                     <div class="col-sm-9 col-xs-12">
                         <div class="col-md-12 col-xs-12">
-                            ${(!this.type || this.type == 'polygon' || this.type == "all") ? `<button  class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>` : ``}
-                            ${(!this.type || this.type == 'line' || this.type == "all") ? `
-                            <button class="btn btn-sm btn-success" id="${this.btnAddVerticalLineId}"><i class="fa fa-arrows-v"></i> Add vertical line</button>
-                            <button class="btn btn-sm btn-success" id="${this.btnAddHorizontalLineId}"><i class="fa fa-arrows-h"></i> Add horizontal line</button>
-                            <button class="btn btn-sm btn-danger" id="${this.btnDrawLineId}"><i class="fa fa-pencil"></i> Draw line</button>
-                            `: ``}
+                            ${this.types.map(t => `
+                            ${(t == types.Rect) ? `<button  class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>` : ``}
+                            ${(t == types.VLine || t == types.Line) ? `<button class="btn btn-sm btn-success" id="${this.btnAddVerticalLineId}"><i class="fa fa-arrows-v"></i> Add vertical line</button>` : ``}
+                            ${(t == types.HLine || t == types.Line) ? `<button class="btn btn-sm btn-success" id="${this.btnAddHorizontalLineId}"><i class="fa fa-arrows-h"></i> Add horizontal line</button>` : ``}
+                            ${(t == types.Line || t == types.Line) ? `<button class="btn btn-sm btn-danger" id="${this.btnDrawLineId}"><i class="fa fa-pencil"></i> Draw line</button>` : ``}
+                            `)
+            }
                         </div>
                         <div class="col-md-12 col-xs-12">
                             <button class="btn btn-sm" id="${this.btnZoomInId}"><i class="fa fa-search-plus"></i> Zoom in</button>
@@ -438,10 +474,10 @@ var vcanvas = /** @class */ (function () {
                     <input id="${mother.id + '-' + s.name + '-input-' + s.name}"  type="text" size="5" style="border:none" value="${s.name}" />
                 </td>
                 <td>
-                    ${s.type}
+                    ${getKeyByValue(types, s.type)}
                 </td>
                 <td style="width:50px">
-                    ${(s.type == "rect") ? (s.AddPointMode ? `
+                    ${(s.type == types.Rect) ? (s.AddPointMode ? `
                 <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.name + '-switch-' + s.name}" type="checkbox" checked><span class="slider round"></span></label>` : `
                 <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.name + '-switch-' + s.name}" type="checkbox" ><span class="slider round"></span></label>`) : ''}</td>
                 <td>
@@ -461,7 +497,7 @@ var vcanvas = /** @class */ (function () {
                     <td>${p.name}</td>
                     <td>${(mother.background.width) ? parseFloat((p.left / mother.background.width) * 100).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
                     <td>${(mother.background.height) ? parseFloat((p.top / mother.background.height) * 100).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
-                    ${s.type == 'rect' ? `
+                    ${s.type == types.Rect ? `
                     <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
                 </tr>`
             ).join('')}</tbody></table></td></tr>
@@ -614,6 +650,7 @@ var vcanvas = /** @class */ (function () {
                 var object = this.Get(oldvalue);
                 if (object) {
                     var newShape = object.Rename(newValue);
+                    this.triggerHandler('CanvasModified', {event:"rename", source:newShape});
                     this.Remove(object);
                     this.Shapes.push(newShape);
                     element.defaultValue = newValue;
@@ -644,9 +681,9 @@ var vcanvas = /** @class */ (function () {
         return js;
     }
     vcanvas.prototype.RemoveProperties = function (obj) {
-        replaceValues.push('background','ActiveObject','isDrawing','tempPoint','units','startX',
-            'startY','LineHovered','prevSelected','js', 'url', 'panning', 'isMouseDown', 'AddPointMode',
-            'isMoving', 'color','parentName', 'AddPointMode', 'lines', 'lbX', 'lbY', 'radius', 'fill', 'stroke', 'lockMovementX',
+        replaceValues.push('background', 'ActiveObject', 'isDrawing', 'tempPoint', 'units', 'startX',
+            'startY', 'LineHovered', 'prevSelected', 'js', 'url', 'panning', 'isMouseDown', 'AddPointMode',
+            'isMoving', 'color', 'parentName', 'AddPointMode', 'lines', 'lbX', 'lbY', 'radius', 'fill', 'stroke', 'lockMovementX',
             'lockMovementY', 'canvas', 'x', 'y');
     }
     vcanvas.prototype.Add = function (params) {
@@ -659,16 +696,20 @@ var vcanvas = /** @class */ (function () {
 
         var result = this.randomName(type);
         var newShape = new Shape({ name: result.name, canvas: this.canvas });
-        if (type === "rect") {
+        if (type === types.Rect) {
             newShape.Rect();
-        } else if (type === "verticalLine") {
+        } else if (type === types.VLine) {
             newShape.VerticalLine();
-        } else if (type === "horizontalLine") {
+        } else if (type === types.HLine) {
             newShape.HorizontalLine();
         }
         newShape.Draw();
         this.Shapes.push(newShape);
         this.loadDataToTable();
+        this.triggerHandler("CanvasModified",{
+            event:`AddShape`,
+            source: newShape
+        });
     };
     vcanvas.prototype.Get = function (object) {
         var shape;
@@ -678,8 +719,8 @@ var vcanvas = /** @class */ (function () {
                     shape = s;
                 }
             });
-        } 
-        
+        }
+
         return shape;
     };
     vcanvas.prototype.randomName = function (type) {
@@ -690,13 +731,17 @@ var vcanvas = /** @class */ (function () {
         var index = 1;
         this.Shapes.forEach(function (o) {
             index++;
-            if (o.type.slice(-4).toUpperCase() == type.slice(-4).toUpperCase())
+            if (type == o.type)
                 lstName.push(o.name);
         });
 
         while (isExsit) {
-            if (type === 'line' || type === 'verticalLine' || type === 'horizontalLine')
+            if (type === types.Line)
                 name = "Line-" + i;
+            else if (type === types.VLine)
+                name = "VLine-" + i;
+            else if (type === types.HLine)
+                name = "HLine-" + i;
             else
                 name = "Rect-" + i;
             if (lstName.indexOf(name) == -1) {
@@ -755,8 +800,8 @@ var vcanvas = /** @class */ (function () {
         this.background = bgr;
     };
     vcanvas.prototype.Remove = function (object) {
+        var o = this.Get(object);
         if (typeof object == 'string' || object instanceof String) {
-            var o = this.Get(object);
             o.Remove();
             this.Shapes.splice(this.Shapes.indexOf(o), 1);
         } else {
@@ -764,6 +809,7 @@ var vcanvas = /** @class */ (function () {
             this.Shapes.splice(this.Shapes.indexOf(object), 1);
         }
         this.loadDataToTable();
+        this.triggerHandler('CanvasModified', {event:"remove", source:this});
     };
     return vcanvas;
 }());
@@ -834,7 +880,7 @@ var Shape = /** @class */ (function () {
         var properties = $.extend({
             //these are the defaults
             name: null,
-            type: "rect",
+            type: types.Rect,
             points: [],
             color: '#' + getRandomColor(),
             isMoving: false,
@@ -869,7 +915,7 @@ var Shape = /** @class */ (function () {
         this.canvas.add(label);
     };
     Shape.prototype.Rect = function () {
-        this.type = 'rect';
+        this.type = types.Rect;
         var p1 = new Point({ index: 0, name: "P-1", parentName: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, canvas: this.canvas });
         var p2 = new Point({ index: 1, name: "P-2", parentName: this.name, left: 350, top: 175, fill: this.color, stroke: this.color, canvas: this.canvas });
         var p3 = new Point({ index: 2, name: "P-3", parentName: this.name, left: 350, top: 300, fill: this.color, stroke: this.color, canvas: this.canvas });
@@ -877,14 +923,14 @@ var Shape = /** @class */ (function () {
         this.points = [p1, p2, p3, p4];
     }
     Shape.prototype.VerticalLine = function () {
-        this.type = 'line',
+        this.type = types.VLine,
             this.points = [
                 new Point({ index: 0, name: "P-1", parentName: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, lockMovementX: true, canvas: this.canvas }),
                 new Point({ index: 1, name: "P-2", parentName: this.name, left: 175, top: 500, fill: this.color, stroke: this.color, lockMovementX: true, canvas: this.canvas })
             ];
     }
     Shape.prototype.HorizontalLine = function () {
-        this.type = 'line';
+        this.type = types.HLine;
         this.points = [
             new Point({ index: 0, name: "P-1", parentName: this.name, left: 175, top: 175, fill: this.color, stroke: this.color, lockMovementY: true, canvas: this.canvas }),
             new Point({ index: 1, name: "P-2", parentName: this.name, left: 500, top: 175, fill: this.color, stroke: this.color, lockMovementY: true, canvas: this.canvas })
@@ -892,7 +938,7 @@ var Shape = /** @class */ (function () {
     }
     Shape.prototype.Draw = function () {
         var dlines = {};
-        if (this.type == "line" || this.type == "verticalLine" || this.type == "horizontalLine") {
+        if (this.type == types.Line || this.type == types.VLine || this.type == types.HLine) {
             var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
                 name: this.name,
                 parentName: this.name,
@@ -972,7 +1018,7 @@ var Shape = /** @class */ (function () {
         pathDirection += ' z';
         var path = new fabric.Path(pathDirection);
         path.set({ name: 'i-' + this.name, parentName: this.name, opacity: 0.005, hasControls: false, hasBorders: false, hasRotatingPoint: false });
-        if (this.type === 'rect') {
+        if (this.type === types.Rect) {
             path.set({ perPixelTargetFind: true });
         }
         // if (this.type === "line" || this.type === "verticalLine" || this.type === "horizontalLine"){
@@ -1159,8 +1205,6 @@ var Shape = /** @class */ (function () {
         var totalAngle = 0;
         var p1 = this.points[0];
         var i1, i2;
-        var type = "convex";
-
         for (var i = 0; i < this.points.length; i++) {
             var p1 = this.points[i];
             var p2;
@@ -1315,3 +1359,22 @@ fabric.Canvas.prototype.getItem = function (name, parentName) {
     }
     return (name) ? object : os;
 };
+// var events = new function () {
+//     var _triggers = {};
+
+//     this.on = function (event, callback) {
+//         if (!_triggers[event])
+//             _triggers[event] = [];
+//         _triggers[event].push(callback);
+//     }
+
+//     this.triggerHandler = function (event, params) {
+//         if (_triggers[event]) {
+//             for (i in _triggers[event])
+//                 _triggers[event][i](params);
+//         }
+//     }
+// };
+function getKeyByValue(object, value) {
+    return Object.keys(object).find(key => object[key] === value);
+}

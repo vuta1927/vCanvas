@@ -15,7 +15,7 @@ typeColumns = { Text: 100, Number: 200, Combobox: 300, Checkbox: 400 };
         var backgroundUrl = properties.backgroundUrl;
         var types = properties.types;
         var extColumns = properties.extColumns;
-        var newCanvas = new vcanvas({ id: GenerateId(), types: types, parent: parentId, backgroundUrl: backgroundUrl, js: json, cols: extColumns });
+        var newCanvas = new vcanvas({ id: GenerateId(), types: types, parent: parentId, backgroundUrl: backgroundUrl, js: json, extColumns: extColumns });
         canvasCollection.push(newCanvas);
         return newCanvas;
     }
@@ -33,10 +33,15 @@ typeColumns = { Text: 100, Number: 200, Combobox: 300, Checkbox: 400 };
     };
 })();
 var extColumn = (function () {
-    function extColumn(name) {
-        this.name = name;
-        this.tpye = typeColumns.Text;
-        this.data = null;
+    function extColumn(params) {
+        var properties = $.extend({
+            name: null,
+            type: typeColumns.Text,
+            data: null
+        },params);
+        this.name = properties.name;
+        this.type = properties.type;
+        this.data = properties.data;
     }
     return extColumn;
 }());
@@ -48,6 +53,7 @@ var vcanvas = /** @class */ (function () {
             //these are the defaults
             id: null,
             parent: null,
+            parentObject: null,
             types: [],
             backgroundUrl: null,
             shapes: [],
@@ -63,10 +69,11 @@ var vcanvas = /** @class */ (function () {
             LineHovered: null,
             prevSelected: null,
             js: null,
-            cols: []
+            extColumns: []
         }, params);
         this.id = properties.id;
         this.parent = properties.parent; //id, ex: <div id='containner'>
+        this.parentObject = properties.parentObject;
         this.types = properties.types;
         this.backgroundUrl = properties.backgroundUrl;
         this.shapes = properties.shapes;
@@ -78,7 +85,7 @@ var vcanvas = /** @class */ (function () {
         this.ActiveObject = properties.ActiveObject;
         this.prevSelected = properties.prevSelected;
         this.js = properties.js;
-        this.cols = properties.cols;
+        this.extColumns = properties.extColumns;
         this.init(this.js);
     }
 
@@ -104,10 +111,19 @@ var vcanvas = /** @class */ (function () {
         this.tableId = this.id + '-table';
         this.btnNewColumnId = this.id + '-btnNewColumn';
         this.tableWrapperId = this.id + '-tableWrapper';
+        this.AddColumnModalId = this.id + '-AddColumnModal';
+        this.AddColumnmodalErrorId = this.id + '-AddColumnmodalError';
+        this.btnAddColumnSaveId = this.id + '-btnAddColumnSave';
+        this.selectTypeColumnId = this.id + '-selectTypeColumn';
+        this.txtNameColumnId = this.id + '-txtNameColumn';
+        this.txtDataColumnId = this.id + '-txtDataColumn';
+        this.divDataColumnsId = this.id + '-divDataColumns';
         replaceValues.push('canvas', this.id, this.bgModalId, this.txtImgUrlId, this.modalErrorId, this.btnChangeBackgroundSaveId,
             this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, 'parent', this.btnDrawLineId, this.btnZoomInId,
             this.btnZoomOutId, this.btnResetZoomId, this.btnAddBackgroundId, this.btnExportId, this.lblNoteId, this.txtNameId,
-            this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId);
+            this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId, this.btnNewColumnId
+            , this.AddColumnModalId, this.AddColumnmodalErrorId,this.btnAddColumnSaveId,this.txtNameColumnId,this.selectTypeColumnId,this.txtDataColumnId,
+            this.divDataColumnsId);
     }
     vcanvas.prototype.initCss = function () {
         var style = document.createElement('style');
@@ -128,7 +144,7 @@ var vcanvas = /** @class */ (function () {
             var RawData = JSON.parse(json);
             this.types = RawData.types;
             this.backgroundUrl = RawData.backgroundUrl ? RawData.backgroundUrl : '';
-            this.cols = RawData.extColumns;
+            this.extColumns = RawData.extColumns;
             this.htmlRender();
             if (!this.canvas) {
                 this.canvas = new fabric.Canvas(this.id + '-canvas', { selection: false, controlsAboveOverlay: false });
@@ -465,30 +481,136 @@ var vcanvas = /** @class */ (function () {
                     <div class="col-sm-3 col-xs-12">
                         <div class="col-sm-12">
                         <button type="button" class="btn btn-sm btn-success" id="${this.btnExportId}"><i class="fa fa-cloud-download"></i> Export to JSON</button>
-                        <button type="button" class="btn btn-sm btn-default" id="${this.btnNewColumnId}"><i class="fa fa-cloud-download"></i> Add column</button>
+                        <button type="button" class="btn btn-sm btn-default" id="${this.btnNewColumnId}" data-toggle="modal" data-target="#${this.AddColumnModalId}"><i class="fa fa-plus"></i> Add column</button>
                         </div>
                         <div class="col-sm-12">
                             <div id="${this.tableWrapperId}" class="table-editable">
-                            <table id="${this.tableId}" class="tblShape table table-hover table-sm text-center">
+                            <table id="${this.tableId}" class="tblShape table table-hover table-sm">
                                 <thead>
                                     <tr>
                                         <th>#</th>
                                         <th>Name</th>
                                         <th>Type</th>
-                                        ${this.cols.map(c => `
+                                        ${this.extColumns.map(c => `
                                             ${c.name ? `<th>${c.name}</th>` : ``}
                                         `)}
-                                        <th data-col="0"></th>
+                                        <th id="0"></th>
                                         <th></th>
                                     </tr>
                                 </thead><tbody></tbody></table>
                             </div>
                         </div>
                     </div>
+                    <div class="modal fade" id="${this.AddColumnModalId}" role="dialog">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Add column</h5>
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    <form class="form-row align-items-center">
+                                        <div class="col-sm-4">
+                                            <label for="${this.txtNameColumnId}">Name</label>
+                                            <input id="${this.txtNameColumnId}" class="form-control form-control-sm" placeholder="">
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <label for="${this.AddColumnmodalErrorId}">Type</label>
+                                            <select id="${this.selectTypeColumnId}" class="form-control form-control-sm"></select>
+                                        </div>
+                                        <br>
+                                        <div id="${this.divDataColumnsId}" class="col-sm-12">
+                                            <label for="${this.txtDataColumnId}">Data</label>
+                                            <textarea id="${this.txtDataColumnId}" style="width:100%, height: 100px" class="form-control"></textarea>
+                                        </div>
+                                    </form>
+                                    <p id="${this.AddColumnmodalErrorId}" class="text-danger"></p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary" id="${this.btnAddColumnSaveId}">Save</button>
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 `;
         if ($(`#${this.parent}`).length) {
             $(`#${this.parent}`).append(str);
+        
         }
+        var mother = this;
+        $(`#${this.selectTypeColumnId}`).change(function(){ 
+            var element = $(`#${mother.divDataColumnsId}`);
+            if(this.value == typeColumns.Combobox){
+                element.hidden = false;
+            }else{
+                element.hidden = true;
+            }
+        });
+        for (var key in typeColumns){
+            $(`#${this.selectTypeColumnId}`).append($(`<option value="${typeColumns[key]}">${key}</option>`));
+        }
+        
+        $(`#${this.btnAddColumnSaveId}`).click(function(){
+            var myTable = $('#'+mother.tableId);
+            var name = $(`#${mother.txtNameColumnId}`).val();
+            if (name) {
+                $('#' + mother.AddColumnmodalErrorId).text("");
+                
+            var type = $(`#${mother.selectTypeColumnId}`).val();
+            var data = $(`#${mother.txtDataColumnId}`).val().split(';');
+            if(type == typeColumns.Combobox){
+                if(!data || data.length <= 0 || data[0] == '')
+                {
+                    $('#' + mother.AddColumnmodalErrorId).text("Please enter items for combobox, each item seperate by a ';' character.");    
+                    return;
+                }else{
+                    $('#' + mother.AddColumnmodalErrorId).text("");
+                }
+            }
+            var newColumn = new extColumn({name:name, type:type, data:data});
+            var context;
+            myTable.find('th').each(function(i,element){
+                console.log(element.id);
+                if(element.id == '0')
+                    $(element).before(`<th>${newColumn.name}</th>`);
+                    
+            });
+            myTable.find('td').each(function(i,element){
+                console.log(element.id);
+                if(element.id == '0'){
+                    var shapeName = element.parentElement.cells[1].children[0].value;
+                    if(newColumn.type == typeColumns.Text)
+                        context = `<input id="${mother.id + '-' + shapeName + '-input-' + newColumn.name}"  type="text" size="4" style="border:none"/>`;
+                    if(newColumn.type == typeColumns.Number)
+                        context = `<input id="${mother.id + '-' + shapeName + '-number-' + newColumn.name}"  type="text" style="border:none"/>`;
+                    if(newColumn.type == typeColumns.Combobox){
+                        context = `<select id="${mother.id + '-' + shapeName + '-select-' + newColumn.name}" style="border:none">${data.map(d=>`
+                        ${d?`<option value="${d}">${d}</option>`:``}
+                        `)}</select>`;
+                    }
+                    if(newColumn.type == typeColumns.Checkbox)
+                        context = `<input id="${mother.id + '-' + shapeName + '-checkbox-' + newColumn.name}"  type="checkbox"/>`;
+                    $(element).before(`<td>${context}</td>`);
+                }
+            });
+            mother.extColumns.push(newColumn);
+            mother.shapes.forEach(function(s){
+                mother.extColumns.forEach(function(c){
+                    $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function(){s[c.name]=this.value; });
+                    $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function(){s[c.name]=this.value; });
+                    $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function(){s[c.name]=this.value; });
+                    $(`#${mother.id + '-' + s.name + '-checkbox-' + c.name}`).change(function(){s[c.name]=this.value; });
+                });
+            });
+            
+            $('#' + mother.AddColumnModalId).modal('hide');
+            } else {
+                $('#' + mother.AddColumnModalId).modal('show');
+                $('#' + mother.AddColumnmodalErrorId).text("");
+                $('#' + mother.AddColumnmodalErrorId).text("please enter a valid name for column!");
+            }
+        });
     }
     vcanvas.prototype.loadDataToTable = function () {
         var mother = this;
@@ -505,23 +627,25 @@ var vcanvas = /** @class */ (function () {
                 <td>
                     ${getKeyByValue(types, s.type)}
                 </td>
-                ${this.cols.map(c => `
+                ${this.extColumns.map(c => `
                     ${(c.type == typeColumns.Text) ? `
-                    <td><input id="${mother.id + '-' + s.name + '-input-' + c.name}"  type="text" size="4" style="border:none" value="${s[c.name]}" />
+                    <td><input id="${mother.id + '-' + s.name + '-input-' + c.name}"  type="text" size="4" style="border:none" value="${s[c.name]?s[c.name]:``}" />
                     </td>`: ``}
                     ${(c.type == typeColumns.Number) ? `
-                    <td><input id="${mother.id + '-' + s.name + '-number-' + c.name}" size="5" style="border:none" value="${s[c.name]}" />
+                    <td><input id="${mother.id + '-' + s.name + '-number-' + c.name}" type="text" style="border:none" value="${s[c.name]?s[c.name]:``}" />
                     </td>`: ``}
                     ${(c.type == typeColumns.Combobox) ? `
                     <td>
-                        <select id="${mother.id + '-' + s.name + '-select-' + c.name}" size="5" style="border:none">
+                        <select id="${mother.id + '-' + s.name + '-select-' + c.name}" style="border:none">
+                        ${c.data? c.data.map(d=>`<option ${d==s[c.name]? `selected="selected"`:``} value="${d}">${d}</option>
+                        `):``}
                         </select>
                     </td>`: ``}
                     ${(c.type == typeColumns.Checkbox) ? `
-                    <td><input id="${mother.id + '-' + s.name + '-checkbox-' + c.name}"  type="checkbox" size="5"/>
+                    <td><input id="${mother.id + '-' + s.name + '-checkbox-' + c.name}"  type="checkbox"/>
                     </td>`: ``}
                 `)}
-                <td style="width:50px" data-col="0">
+                <td style="width:50px" id="0" data-col="0">
                     ${(s.type == types.Rect) ? (s.AddPointMode ? `
                 <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.name + '-switch-' + s.name}" type="checkbox" checked><span class="slider round"></span></label>` : `
                 <label class="switch" data-toggle="tooltip" data-delay="0" data-placement="left" title="click on canvas where you want to add point!"><input id="${mother.id + '-' + s.name + '-switch-' + s.name}" type="checkbox" ><span class="slider round"></span></label>`) : ''}</td>
@@ -530,7 +654,7 @@ var vcanvas = /** @class */ (function () {
                 </td>
             </tr>
             <tr hidden="true">
-                <td colspan="4">
+                <td extColumnspan="4">
                     <table style="background-color:#fff" class="tblShapeDetail table table-bordered">
                         <thead>
                             <tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td><td></td></tr>
@@ -561,8 +685,8 @@ var vcanvas = /** @class */ (function () {
                 $('#' + mother.id + '-' + s.name + '-tr-' + p.name).click(function () { mother.onPointTrclicked(p) });
                 $('#' + mother.id + '-' + s.name + '-spanRemovePoint-' + p.name).click(function () { mother.onPointRemoveClick(p) });
             });
-            if (s.cols) {
-                s.cols.forEach(function (c) {
+            if (mother.extColumns) {
+                mother.extColumns.forEach(function (c) {
                     $('#' + mother.id + '-' + s.name + '-number-' + c.name).spinedit();
                 });
             }
@@ -731,10 +855,10 @@ var vcanvas = /** @class */ (function () {
         return js;
     }
     vcanvas.prototype.RemoveProperties = function (obj) {
-        replaceValues.push('background', 'ActiveObject', 'cols', 'isDrawing', 'tempPoint', 'units', 'startX',
+        replaceValues.push('background', 'ActiveObject', 'isDrawing', 'tempPoint', 'units', 'startX',
             'startY', 'LineHovered', 'prevSelected', 'js', 'url', 'panning', 'isMouseDown', 'AddPointMode',
             'isMoving', 'color', 'parentName', 'AddPointMode', 'lines', 'lbX', 'lbY', 'radius', 'fill', 'stroke', 'lockMovementX',
-            'lockMovementY', 'canvas', 'x', 'y');
+            'lockMovementY', 'canvas', 'x', 'y', 'parentObject');
     }
     vcanvas.prototype.Add = function (params) {
         var properties = $.extend({

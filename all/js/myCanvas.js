@@ -89,7 +89,9 @@ var vcanvas = /** @class */ (function () {
             LineHovered: null,
             prevSelected: null,
             js: null,
-            extColumns: []
+            extColumns: [],
+            currentWidth: null,
+            currentHeight: null
         }, params);
         this.id = properties.id;
         this.parent = properties.parent; //id, ex: <div id='containner'>
@@ -106,6 +108,8 @@ var vcanvas = /** @class */ (function () {
         this.prevSelected = properties.prevSelected;
         this.js = properties.js;
         this.extColumns = properties.extColumns;
+        this.currentHeight = properties.currentHeight;
+        this.currentWidth = properties.currentWidth;
         this.init(this.js);
     }
 
@@ -142,7 +146,7 @@ var vcanvas = /** @class */ (function () {
             this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, 'parent', this.btnDrawLineId, this.btnZoomInId,
             this.btnZoomOutId, this.btnResetZoomId, this.btnAddBackgroundId, this.btnExportId, this.lblNoteId, this.txtNameId,
             this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId, this.btnNewColumnId, this.AddColumnModalId, this.AddColumnmodalErrorId, this.btnAddColumnSaveId, this.txtNameColumnId, this.selectTypeColumnId, this.txtDataColumnId,
-            this.divDataColumnsId);
+            this.divDataColumnsId, 'currentWidth', 'currentHeight');
     }
     vcanvas.prototype.initCss = function () {
         var style = document.createElement('style');
@@ -152,17 +156,7 @@ var vcanvas = /** @class */ (function () {
             /*border: 1px solid black;	*/
             border: 1px solid black;
         }`;
-        var fileref = document.createElement('link');
-        fileref.setAttribute('rel', 'stylesheet');
-        fileref.setAttribute('href', '//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css');
-
-        var uijquery = document.createElement('script');
-        uijquery.setAttribute("type", "text/javascript");
-        uijquery.setAttribute('src', 'https://code.jquery.com/ui/1.12.1/jquery-ui.js');
-
         document.getElementsByTagName('head')[0].appendChild(style);
-        document.getElementsByTagName('head')[0].appendChild(fileref);
-        document.getElementsByTagName('head')[0].appendChild(uijquery);
     }
     vcanvas.prototype.init = function () {
         this.initId();
@@ -182,7 +176,8 @@ var vcanvas = /** @class */ (function () {
                 });
                 fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
                 fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
-            }
+            };
+
             for (var i = 0; i < RawData.shapes.length; i++) {
                 var color = '#' + getRandomColor();
                 var s = RawData.shapes[i];
@@ -302,7 +297,14 @@ var vcanvas = /** @class */ (function () {
             });
             $('#' + mother.btnResetZoomId).click(function () {
                 mother.canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
-                mother.canvas.setZoom(0.51);
+                var img = mother.getItem('background', null);
+                if (img) {
+                    var scaleFactor = mother.currentWidth / img.width;
+                    c.setZoom(scaleFactor / 1.1);
+                } else {
+                    mother.canvas.setZoom(0.51);
+                }
+
                 mother.canvas.renderAll();
             })
             $('#' + mother.btnZoomInId).click(function () {
@@ -330,6 +332,8 @@ var vcanvas = /** @class */ (function () {
                 c.setHeight(c.getHeight() * scaleMultiplier);
                 c.renderAll();
                 c.calcOffset();
+                mother.currentWidth = c.getWidth();
+                mother.currentHeight = c.getHeight();
             }
             $(window).resize(function () {
                 if (c.width != $("#" + mother.id + '-wrapper').width()) {
@@ -339,8 +343,15 @@ var vcanvas = /** @class */ (function () {
                     c.setHeight(c.getHeight() * scaleMultiplier);
                     c.renderAll();
                     c.calcOffset();
+                    mother.currentWidth = c.getWidth();
+                    mother.currentHeight = c.getHeight();
                 }
             });
+            var img = mother.getItem('background', null);
+            if (img) {
+                var scaleFactor = mother.currentWidth / img.width;
+                c.setZoom(scaleFactor / 1.1);
+            }
         });
         c.on({
             'mouse:down': function (o) {
@@ -401,7 +412,7 @@ var vcanvas = /** @class */ (function () {
                         for (var i = 0; i < allObject.length; i++) {
                             if (allObject[i].get('type') === "circle") {
                                 allObject[i].set({
-                                    radius: 5
+                                    radius: 3
                                 });
                             }
                         }
@@ -472,53 +483,44 @@ var vcanvas = /** @class */ (function () {
             'object:moving': function (e) {
                 var p = e.target;
                 var obj = e.target;
-                // if object is too big ignore
-                if (obj.currentHeight > mother.background.height || obj.currentWidth > mother.background.width) {
-                    return;
-                }
-                obj.setCoords();
-                // top-left  corner
-                if (obj.getBoundingRect().top < 0 || obj.getBoundingRect().left < 0) {
-                    obj.top = Math.max(obj.top, obj.top - obj.getBoundingRect().top);
-                    obj.left = Math.max(obj.left, obj.left - obj.getBoundingRect().left);
-                }
-                // bot-right corner
-                if (obj.getBoundingRect().top + obj.getBoundingRect().height > mother.background.height || obj.getBoundingRect().left + obj.getBoundingRect().width > mother.background.width) {
-                    obj.top = Math.min(obj.top, mother.background.height - obj.getBoundingRect().height + obj.top - obj.getBoundingRect().top);
-                    obj.left = Math.min(obj.left, mother.background.width - obj.getBoundingRect().width + obj.left - obj.getBoundingRect().left);
-                }
+                var pointer = c.getPointer(e.e);
+                var allObject = c.getObjects();
+                if (p.name.split('-')[0] === "i") {
+                    for (var i = 0; i < mother.shapes.length; i++) {
+                        if (p.parentName === mother.shapes[i].name) {
+                            mother.ActiveObject = mother.shapes[i];
+                            mother.ActiveObject.isMoving = true;
+                            var img = mother.getItem('background', null);
+                            var scaleFactor = 1;
+                            if (img) {
+                                scaleFactor = mother.currentWidth / img.width;
+                            }
+                            mother.shapes[i].Move({
+                                offsetX: e.e.movementX * scaleFactor,
+                                offsetY: e.e.movementY * scaleFactor
+                            });
 
-                // var pointer = c.getPointer(e.e);
-                // var allObject = c.getObjects();
-                // if (p.name.split('-')[0] === "i") {
-                //     for (var i = 0; i < mother.shapes.length; i++) {
-                //         if (p.parentName === mother.shapes[i].name) {
-                //             mother.ActiveObject = mother.shapes[i];
-                //             mother.ActiveObject.isMoving = true;
-                //             mother.shapes[i].Move({
-                //                 offsetX: e.e.movementX,
-                //                 offsetY: e.e.movementY
-                //             });
-                //             break;
-                //         }
-                //     }
-                // } else {
-                //     for (var i = 0; i < mother.shapes.length; i++) {
-                //         if (p.parentName === mother.shapes[i].name) {
-                //             mother.ActiveObject = mother.shapes[i];
-                //             mother.ActiveObject.isMoving = true;
-                //             mother.shapes[i].Move({
-                //                 point: p
-                //             });
-                //             break;
-                //         }
-                //     }
-                // }
-                // mother.canvas.renderAll();
-                // mother.triggerHandler('CanvasModified', {
-                //     event: 'Moving',
-                //     source: mother.ActiveObject
-                // });
+                            console.log(e.e.movementX, e.e.movementY);
+                            break;
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < mother.shapes.length; i++) {
+                        if (p.parentName === mother.shapes[i].name) {
+                            mother.ActiveObject = mother.shapes[i];
+                            mother.ActiveObject.isMoving = true;
+                            mother.shapes[i].Move({
+                                point: p
+                            });
+                            break;
+                        }
+                    }
+                }
+                mother.canvas.renderAll();
+                mother.triggerHandler('CanvasModified', {
+                    event: 'Moving',
+                    source: mother.ActiveObject
+                });
             }
 
         });
@@ -745,8 +747,8 @@ var vcanvas = /** @class */ (function () {
         parentElement = null;
         var stt = 0;
         context = `${mother.shapes.map(s =>
-            `<tr data-toggle="collapse" data-target="#${mother.id + '-'+s.name+'tr-pointDetail'}">
-                <td class="text-center">
+            `<tr>
+                <td class="text-center"  data-toggle="collapse" data-target="#${mother.id + '-'+s.name+'tr-pointDetail'}">
                     ${++stt}
                 </td>
                 <td class="text-center">
@@ -1091,10 +1093,10 @@ var vcanvas = /** @class */ (function () {
             bgr.width = img.width;
             // if(img.height)
             //     c.setDimensions({height: img.height, width:img.width});
-            // c.add(img);
+            c.add(img);
             // c.setZoom(0.51);
-            // c.sendToBack(img);
-            c.setBackgroundImage(img, c.renderAll.bind(c));
+            c.sendToBack(img);
+            //c.setBackgroundImage(img, c.renderAll.bind(c));
             // c.renderAll();
         });
         this.background = bgr;
@@ -1161,7 +1163,7 @@ var Point = /** @class */ (function () {
             left: this.left,
             top: this.top,
             fill: this.fill,
-            radius: 5,
+            radius: 3,
             strokeWidth: 1,
             stroke: "black",
             name: this.name,
@@ -1328,11 +1330,26 @@ var Shape = /** @class */ (function () {
     }
     Shape.prototype.Draw = function () {
         var dlines = {};
-        if (this.type == types.Line || this.type == types.VLine || this.type == types.HLine) {
+        if (this.type == types.Line) {
             var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
                 name: this.name,
                 parentName: this.name,
                 strokeWidth: 2,
+                fill: this.color,
+                stroke: this.color,
+                originX: 'center',
+                originY: 'center',
+                selectable: false,
+                perPixelTargetFind: true
+            });
+            this.lines = [line.name];
+            dlines[line.name] = line;
+            this.canvas.add(line);
+        } else if (this.type == types.VLine || this.type == types.HLine) {
+            var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
+                name: this.name,
+                parentName: this.name,
+                strokeWidth: 1,
                 fill: this.color,
                 stroke: this.color,
                 originX: 'center',
@@ -1358,7 +1375,8 @@ var Shape = /** @class */ (function () {
                         hasControls: false,
                         hasBorders: false,
                         hasRotatingPoint: false,
-                        hoverCursor: this.hoverCursor
+                        hoverCursor: this.hoverCursor,
+                        perPixelTargetFind: true
                     });
                 } else {
                     line = new fabric.Line([this.points[i].left, this.points[i].top, this.points[0].left, this.points[0].top], {
@@ -1371,7 +1389,8 @@ var Shape = /** @class */ (function () {
                         hasControls: false,
                         hasBorders: false,
                         hasRotatingPoint: false,
-                        hoverCursor: this.hoverCursor
+                        hoverCursor: this.hoverCursor,
+                        perPixelTargetFind: true
                     });
                 }
                 dlines[line.name] = line;
@@ -1403,6 +1422,7 @@ var Shape = /** @class */ (function () {
         var offsetX = properties.offsetX;
         var offsetY = properties.offsetY;
         var point = properties.point;
+
         this.Remove();
         if (point) {
             for (var i = 0; i < this.points.length; i++) {
@@ -1434,7 +1454,7 @@ var Shape = /** @class */ (function () {
             hasBorders: false,
             hasRotatingPoint: false
         });
-        if (this.type === types.Rect) {
+        if (this.type === types.Rect || this.type === types.Line) {
             path.set({
                 perPixelTargetFind: true
             });

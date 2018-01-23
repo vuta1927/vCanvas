@@ -11,6 +11,8 @@ typeColumns = {
     Checkbox: 400
 };
 ExtendOtions = [];
+globalScaleValue = 1;
+globalStrokeWidth = 3;
 (function () {
     var canvasCollection = [];
 
@@ -339,12 +341,48 @@ var vcanvas = /** @class */ (function () {
             $(c.wrapperEl).on('mousewheel', function (e) {
                 var delta = e.originalEvent.wheelDelta / 500;
                 var pointer = c.getPointer(e.e);
+                var scaleFactor = 0;
+                var objects = c.getObjects();
                 if (delta > 0) {
-                    c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), c.getZoom() * 1.1);
+                    scaleFactor = c.getZoom() * 1.1;
+                    c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), scaleFactor);
+                    console.log('Zoom in', delta, c.getZoom() * 1.1);
+                    for (var i in objects) {
+                        if(objects[i].get('type') == 'image' || objects[i].get('type')=="path") continue;
+                        
+                        if(objects[i].get('type')=="line"){
+                            objects[i].strokeWidth /=1.1;
+                            globalStrokeWidth = objects[i].strokeWidth;
+                            continue;
+                        }
+                        objects[i].scaleX /= 1.1;
+                        objects[i].scaleY /= 1.1;
+                        globalScaleValue = objects[i].scaleX;
+                        objects[i].setCoords();
+                        console.log(objects[i].name,objects[i].scaleX, objects[i].scaleY);
+                    }
                 }
                 if (delta < 0) {
-                    c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), c.getZoom() / 1.1);
+                    scaleFactor = c.getZoom() / 1.1;
+                    c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), scaleFactor);
+                    console.log('Zoom out', delta, c.getZoom() / 1.1);
+                    for (var i in objects) {
+                        if(objects[i].get('type')=="line"){
+                            objects[i].strokeWidth *=1.1;
+                            globalStrokeWidth = objects[i].strokeWidth;
+                            continue;
+                        }
+                        if(objects[i].get('type') == 'image' || objects[i].get('type')=="path") continue;
+                        objects[i].scaleX *= 1.1;
+                        objects[i].scaleY *= 1.1;
+                        globalScaleValue = objects[i].scaleX;
+                        objects[i].setCoords();
+                        console.log(objects[i].name,objects[i].scaleX, objects[i].scaleY);
+                    }
                 }
+                
+                
+                
                 return false;
             });
             if (c.width != $("#" + mother.id + '-wrapper').width()) {
@@ -418,7 +456,7 @@ var vcanvas = /** @class */ (function () {
                         points: [A, B],
                         canvas: c
                     });
-                    line.Draw();
+                    line.Draw({scaleFactor:globalScaleValue, strokeWidth: globalStrokeWidth});
                     mother.ActiveObject = line;
                 } else if (mother.AddPointMode) {
                     var newPoint = new Point({
@@ -435,7 +473,7 @@ var vcanvas = /** @class */ (function () {
                         for (var i = 0; i < allObject.length; i++) {
                             if (allObject[i].get('type') === "circle") {
                                 allObject[i].set({
-                                    radius: 3
+                                    radius: 10
                                 });
                             }
                         }
@@ -486,7 +524,7 @@ var vcanvas = /** @class */ (function () {
             'mouse:up': function (o) {
                 if (mother.isDrawing) {
                     mother.ActiveObject.Remove();
-                    mother.ActiveObject.Draw();
+                    mother.ActiveObject.Draw({scaleFactor:globalScaleValue, strokeWidth: globalStrokeWidth});
                     mother.shapes.push(mother.ActiveObject);
                     mother.canvas.renderAll();
                     mother.loadDataToTable();
@@ -498,6 +536,10 @@ var vcanvas = /** @class */ (function () {
                 if (mother.ActiveObject && mother.ActiveObject.isMoving) {
                     mother.ActiveObject.isMoving = false;
                     mother.loadDataToTable();
+                    mother.triggerHandler('CanvasModified', {
+                        event: 'Moving',
+                        source: mother.ActiveObject
+                    });
                 }
                 mother.panning = false;
                 mother.isDrawing = false;
@@ -505,7 +547,9 @@ var vcanvas = /** @class */ (function () {
             },
             'object:moving': function (e) {
                 var p = e.target;
+                console.log('moving', p.scaleX, p.scaleY, p.zoomX, p.zoomY);
                 var obj = e.target;
+                var scaleValue = p.scaleX;
                 var pointer = c.getPointer(e.e);
                 var allObject = c.getObjects();
                 if (p.name.split('-')[0] == "i" || p.name.split('-')[0] == 'lb') {
@@ -520,10 +564,10 @@ var vcanvas = /** @class */ (function () {
                             }
                             mother.shapes[i].Move({
                                 offsetX: e.e.movementX * scaleFactor,
-                                offsetY: e.e.movementY * scaleFactor
+                                offsetY: e.e.movementY * scaleFactor,
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
                             });
-
-                            console.log(e.e.movementX, e.e.movementY);
                             break;
                         }
                     }
@@ -533,17 +577,15 @@ var vcanvas = /** @class */ (function () {
                             mother.ActiveObject = mother.shapes[i];
                             mother.ActiveObject.isMoving = true;
                             mother.shapes[i].Move({
-                                point: p
+                                point: p,
+                                scaleFactor: scaleValue,
+                                strokeWidth: globalStrokeWidth
                             });
                             break;
                         }
                     }
                 }
                 mother.canvas.renderAll();
-                mother.triggerHandler('CanvasModified', {
-                    event: 'Moving',
-                    source: mother.ActiveObject
-                });
             }
 
         });
@@ -902,7 +944,7 @@ var vcanvas = /** @class */ (function () {
         for (var i = 0; i < allObject.length; i++) {
             if (allObject[i].get('type') === "circle") {
                 allObject[i].set({
-                    radius: 5
+                    radius: 10
                 });
             }
         }
@@ -953,7 +995,7 @@ var vcanvas = /** @class */ (function () {
         for (var i = 0; i < allObject.length; i++) {
             if (allObject[i].get('type') === "circle") {
                 allObject[i].set({
-                    radius: 5
+                    radius: 10
                 });
             }
         }
@@ -969,7 +1011,7 @@ var vcanvas = /** @class */ (function () {
         if (points.length > 0) {
             for (var i = 0; i < points.length; i++) {
                 points[i].set({
-                    radius: 15
+                    radius: 10
                 });
             }
             this.canvas.renderAll();
@@ -1030,7 +1072,7 @@ var vcanvas = /** @class */ (function () {
     vcanvas.prototype.Add = function (params) {
         var properties = $.extend({
             name: null,
-            type: null
+            type: null,
         }, params);
         var name = properties.name;
         var type = properties.type;
@@ -1047,7 +1089,7 @@ var vcanvas = /** @class */ (function () {
         } else if (type === types.HLine) {
             newShape.HorizontalLine();
         }
-        newShape.Draw();
+        newShape.Draw({scaleFactor:globalScaleValue});
         this.shapes.push(newShape);
         this.loadDataToTable();
         this.triggerHandler("CanvasModified", {
@@ -1210,18 +1252,29 @@ var Point = /** @class */ (function () {
         this.lockMovementY = properties.lockMovementY;
         this.canvas = properties.canvas;
     }
-    Point.prototype.Draw = function (c) {
+    Point.prototype.Draw = function (params) {
+        var options = $.extend({
+            canvas: null,
+            scaleFactor: null
+        }, params);
+        var c = options.canvas;
+        var scaleFactor = options.scaleFactor;
+
         var p = new fabric.Circle({
             left: this.left,
             top: this.top,
             fill: this.fill,
-            radius: 3,
+            radius: 10,
             strokeWidth: 1,
             stroke: "black",
             name: this.name,
             parentName: this.parentName,
             hoverCursor: "pointer"
         });
+        if(scaleFactor){
+            p.scaleX = scaleFactor;
+            p.scaleY = scaleFactor;
+        }
         this.canvas = c;
         if (this.lockMovementX)
             p.set({
@@ -1257,7 +1310,14 @@ var Shape = /** @class */ (function () {
         this.isMoving = properties.isMoving;
         this.canvas = properties.canvas;
     };
-    Shape.prototype.DrawLabel = function (data) {
+    Shape.prototype.DrawLabel = function (params) {
+        var options = $.extend({
+            data: null,
+            scaleFactor: null
+        }, params);
+        var data = options.data;
+        var scaleFactor = options.scaleFactor;
+
         if (!this.lbX && !this.lbY) {
             for (var i = 0; i < this.points.length; i++) {
                 if (this.points[i].name == "P-1") {
@@ -1275,13 +1335,17 @@ var Shape = /** @class */ (function () {
             parentName: this.name,
             left: this.lbX,
             top: this.lbY,
-            fontSize: 20,
+            fontSize: 40,
             fontFamily: "calibri",
             fill: this.color,
             hasRotatingPoint: false,
             centerTransform: true,
             selectable: true
         });
+        if (scaleFactor){
+            label.scaleX = scaleFactor;
+            label.scaleY = scaleFactor;
+        }
         label.hasControls = label.hasBorders = false;
         this.canvas.add(label);
     };
@@ -1383,13 +1447,18 @@ var Shape = /** @class */ (function () {
             })
         ];
     }
-    Shape.prototype.Draw = function () {
+    Shape.prototype.Draw = function (params) {
+        var options = $.extend({
+            scaleFactor: null,
+            strokeWidth: null
+        },params);
+        var scaleFactor = options.scaleFactor;
+        var strokeWidth = options.strokeWidth;
         var dlines = {};
         if (this.type == types.Line) {
             var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
                 name: this.name,
                 parentName: this.name,
-                strokeWidth: 2,
                 fill: this.color,
                 stroke: this.color,
                 originX: 'center',
@@ -1397,6 +1466,11 @@ var Shape = /** @class */ (function () {
                 selectable: false,
                 perPixelTargetFind: true
             });
+            if (strokeWidth){
+                line.strokeWidth = strokeWidth;
+            }else{
+                line.strokeWidth = 3;
+            }
             this.lines = [line.name];
             dlines[line.name] = line;
             this.canvas.add(line);
@@ -1404,13 +1478,17 @@ var Shape = /** @class */ (function () {
             var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
                 name: this.name,
                 parentName: this.name,
-                strokeWidth: 1,
                 fill: this.color,
                 stroke: this.color,
                 originX: 'center',
                 originY: 'center',
                 selectable: false
             });
+            if (strokeWidth){
+                line.strokeWidth = globalStrokeWidth;
+            }else{
+                line.strokeWidth = 3;
+            }
             this.lines = [line.name];
             dlines[line.name] = line;
             this.canvas.add(line);
@@ -1424,7 +1502,6 @@ var Shape = /** @class */ (function () {
                         name: "line" + i,
                         parentName: this.name,
                         fill: this.color,
-                        strokeWidth: 2,
                         stroke: this.color,
                         selectable: false,
                         hasControls: false,
@@ -1438,7 +1515,6 @@ var Shape = /** @class */ (function () {
                         name: "line" + i,
                         parentName: this.name,
                         fill: this.color,
-                        strokeWidth: 2,
                         stroke: this.color,
                         selectable: false,
                         hasControls: false,
@@ -1447,6 +1523,11 @@ var Shape = /** @class */ (function () {
                         hoverCursor: this.hoverCursor,
                         perPixelTargetFind: true
                     });
+                }
+                if (globalStrokeWidth){
+                    line.strokeWidth = globalStrokeWidth;
+                }else{
+                    line.strokeWidth = 3;
                 }
                 dlines[line.name] = line;
                 this.canvas.add(line);
@@ -1463,7 +1544,7 @@ var Shape = /** @class */ (function () {
         for (var i = 0; i < this.points.length; i++) {
             this.points[i].hoverCursor = this.hoverCursor;
             this.points[i].fill = this.color;
-            this.points[i].Draw(this.canvas);
+            this.points[i].Draw({canvas:this.canvas, scaleFactor:scaleFactor});
         }
         var data = '';
         if (ExtendOtions.length > 0) {
@@ -1478,19 +1559,22 @@ var Shape = /** @class */ (function () {
                 }
             }
         }
-        this.DrawLabel(data);
+        this.DrawLabel({data: data, scaleFactor: scaleFactor});
     };
     Shape.prototype.Move = function (params) {
         var properties = $.extend({
             //these are the defaults
             offsetX: 0,
             offsetY: 0,
-            point: null
+            point: null,
+            scaleFactor: null,
+            strokeWidth: null
         }, params);
         var offsetX = properties.offsetX;
         var offsetY = properties.offsetY;
         var point = properties.point;
-
+        var scaleFactor = properties.scaleFactor;
+        var strokeWidth = properties.strokeWidth;
         this.Remove();
         if (point) {
             for (var i = 0; i < this.points.length; i++) {
@@ -1505,7 +1589,7 @@ var Shape = /** @class */ (function () {
         } else {
             this.GetNewCoodr(offsetX, offsetY);
         }
-        this.Draw();
+        this.Draw({scaleFactor:scaleFactor, strokeWidth: strokeWidth});
     }
     Shape.prototype.FillInside = function () {
         var pathDirection = 'M';

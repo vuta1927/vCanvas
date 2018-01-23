@@ -34,7 +34,8 @@
 		c0.on('CanvasModified', function (e) {
 			// e.event: name of event
 			// e.source
-			console.log(e.event);
+			
+			console.log(e.event, c0.ToJson());
         });
 		//console.log(c0.id);
 		var c1 = myCanvas.Create({ parent: "wrapperMain1", json: sample});

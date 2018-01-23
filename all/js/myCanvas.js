@@ -10,6 +10,7 @@ typeColumns = {
     Combobox: 300,
     Checkbox: 400
 };
+ExtendOtions = [];
 (function () {
     var canvasCollection = [];
 
@@ -19,20 +20,23 @@ typeColumns = {
             parent: null,
             backgroundUrl: null,
             types: [],
-            extColumns: []
+            extColumns: [],
+            maxShape: 5
         }, params);
         var json = properties.json;
         var parentId = properties.parent;
         var backgroundUrl = properties.backgroundUrl;
         var types = properties.types;
         var extColumns = properties.extColumns;
+        var maxShape = properties.maxShape;
         var newCanvas = new vcanvas({
             id: GenerateId(),
             types: types,
             parent: parentId,
             backgroundUrl: backgroundUrl,
             js: json,
-            extColumns: extColumns
+            extColumns: extColumns,
+            max: maxShape
         });
         canvasCollection.push(newCanvas);
         return newCanvas;
@@ -91,7 +95,8 @@ var vcanvas = /** @class */ (function () {
             js: null,
             extColumns: [],
             currentWidth: null,
-            currentHeight: null
+            currentHeight: null,
+            max: null
         }, params);
         this.id = properties.id;
         this.parent = properties.parent; //id, ex: <div id='containner'>
@@ -110,6 +115,7 @@ var vcanvas = /** @class */ (function () {
         this.extColumns = properties.extColumns;
         this.currentHeight = properties.currentHeight;
         this.currentWidth = properties.currentWidth;
+        this.max = properties.max;
         this.init(this.js);
     }
 
@@ -168,6 +174,7 @@ var vcanvas = /** @class */ (function () {
             this.types = RawData.types;
             this.backgroundUrl = RawData.backgroundUrl ? RawData.backgroundUrl : '';
             this.extColumns = RawData.extColumns;
+            ExtendOtions = RawData.extColumns;
             this.htmlRender();
             if (!this.canvas) {
                 this.canvas = new fabric.Canvas(this.id + '-canvas', {
@@ -270,24 +277,40 @@ var vcanvas = /** @class */ (function () {
 
             })
             $('#' + mother.btnAddRectId).click(function () {
+                if(mother.shapes.length == mother.max && mother.max > 0){
+                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                    return;
+                }
                 mother.Add({
                     type: types.Rect
                 });
             });
 
             $('#' + mother.btnAddVerticalLineId).click(function () {
+                if(mother.shapes.length == mother.max && mother.max > 0){
+                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                    return;
+                }
                 mother.Add({
                     type: types.VLine
                 });
             });
 
             $('#' + mother.btnAddHorizontalLineId).click(function () {
+                if(mother.shapes.length == mother.max && mother.max > 0){
+                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                    return;
+                }
                 mother.Add({
                     type: types.HLine
                 });
             });
 
             $('#' + mother.btnDrawLineId).click(function () {
+                if(mother.shapes.length == mother.max && mother.max > 0){
+                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                    return;
+                }
                 mother.isDrawing = true;
             });
             $('#' + mother.btnExportId).click(function () {
@@ -485,9 +508,9 @@ var vcanvas = /** @class */ (function () {
                 var obj = e.target;
                 var pointer = c.getPointer(e.e);
                 var allObject = c.getObjects();
-                if (p.name.split('-')[0] === "i") {
+                if (p.name.split('-')[0] == "i" || p.name.split('-')[0] == 'lb') {
                     for (var i = 0; i < mother.shapes.length; i++) {
-                        if (p.parentName === mother.shapes[i].name) {
+                        if (p.parentName == mother.shapes[i].name) {
                             mother.ActiveObject = mother.shapes[i];
                             mother.ActiveObject.isMoving = true;
                             var img = mother.getItem('background', null);
@@ -626,10 +649,7 @@ var vcanvas = /** @class */ (function () {
                         </div>
                     </div>
                 `;
-        if ($(`#${this.parent}`).length) {
-            $(`#${this.parent}`).append(str);
 
-        }
         var mother = this;
         $(`#${this.txtNameColumnId}`).keypress(function () {
             return mother.ValidateKey()
@@ -642,6 +662,10 @@ var vcanvas = /** @class */ (function () {
                 element.hidden = true;
             }
         });
+        if ($(`#${this.parent}`).length) {
+            $(`#${this.parent}`).append(str);
+
+        }
         for (var key in typeColumns) {
             $(`#${this.selectTypeColumnId}`).append($(`<option value="${typeColumns[key]}">${key}</option>`));
         }
@@ -727,7 +751,12 @@ var vcanvas = /** @class */ (function () {
                                 spin: function (event, ui) {
                                     s[c.name] = ui.value;
                                 },
-                                change: function (event, ui) {}
+                                change: function (event, ui) {
+                                    var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
+                                    s[c.name] = element.value;
+                                    s.Remove();
+                                    s.Draw();
+                                }
                             });
                         });
                     });
@@ -840,7 +869,30 @@ var vcanvas = /** @class */ (function () {
             });
             if (mother.extColumns) {
                 mother.extColumns.forEach(function (c) {
-                    $('#' + mother.id + '-' + s.name + '-number-' + c.name).spinner();
+                    $('#' + mother.id + '-' + s.name + '-number-' + c.name).spinner({
+                        change: function () {
+                            var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
+                            s[c.name] = element.value;
+                            s.Remove();
+                            s.Draw();
+                        }
+                    });
+                    $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
+                        var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
+                        s[c.name] = element.value;
+                        s.Remove();
+                        s.Draw();
+                    });
+                    $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
+                        var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
+                        alert(element.value);
+                    });
+                    $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function () {
+                        var element = document.getElementById(mother.id + '-' + s.name + '-input-' + c.name);
+                        s[c.name] = element.value;
+                        s.Remove();
+                        s.Draw();
+                    });
                 });
             }
         });
@@ -1205,7 +1257,7 @@ var Shape = /** @class */ (function () {
         this.isMoving = properties.isMoving;
         this.canvas = properties.canvas;
     };
-    Shape.prototype.DrawLabel = function () {
+    Shape.prototype.DrawLabel = function (data) {
         if (!this.lbX && !this.lbY) {
             for (var i = 0; i < this.points.length; i++) {
                 if (this.points[i].name == "P-1") {
@@ -1215,7 +1267,10 @@ var Shape = /** @class */ (function () {
                 }
             }
         }
-        var label = new fabric.Text(this.name, {
+        var context = '';
+        if (data) context = this.name + '( ' + data + ' )';
+        else context = this.name;
+        var label = new fabric.Text(context, {
             name: "lb-" + this.name,
             parentName: this.name,
             left: this.lbX,
@@ -1410,7 +1465,20 @@ var Shape = /** @class */ (function () {
             this.points[i].fill = this.color;
             this.points[i].Draw(this.canvas);
         }
-        this.DrawLabel();
+        var data = '';
+        if (ExtendOtions.length > 0) {
+            for (var i = 0; i < ExtendOtions.length; i++) {
+                var temp = this[ExtendOtions[i].name];
+                if (temp) {
+                    if (i == (ExtendOtions.length - 1)) {
+                        data += ExtendOtions[i].name + ':' + temp;
+                    } else {
+                        data += ExtendOtions[i].name + ':' + temp + '; ';
+                    }
+                }
+            }
+        }
+        this.DrawLabel(data);
     };
     Shape.prototype.Move = function (params) {
         var properties = $.extend({

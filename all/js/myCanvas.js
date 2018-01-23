@@ -13,10 +13,10 @@ typeColumns = {
 ExtendOtions = [];
 globalScaleValue = 1;
 globalStrokeWidth = 3;
-(function () {
-    var canvasCollection = [];
+canvasCollection = [];
+var myCanvas = (function () {
 
-    function Create(params) {
+    function myCanvas(params) {
         var properties = $.extend({
             json: null,
             parent: null,
@@ -51,11 +51,7 @@ globalStrokeWidth = 3;
         });
         return `vcanvas-${index}`;
     }
-    myCanvas = {
-        Create: Create,
-        GenerateId: GenerateId,
-        canvasCollection: canvasCollection
-    };
+    return myCanvas;
 })();
 var extColumn = (function () {
     function extColumn(params) {
@@ -563,8 +559,8 @@ var vcanvas = /** @class */ (function () {
                                 scaleFactor = mother.currentWidth / img.width;
                             }
                             mother.shapes[i].Move({
-                                offsetX: e.e.movementX * scaleFactor,
-                                offsetY: e.e.movementY * scaleFactor,
+                                offsetX: e.e.movementX * globalStrokeWidth,
+                                offsetY: e.e.movementY* globalStrokeWidth,
                                 scaleFactor: globalScaleValue,
                                 strokeWidth: globalStrokeWidth
                             });
@@ -591,7 +587,7 @@ var vcanvas = /** @class */ (function () {
         });
     };
     vcanvas.prototype.htmlRender = function (Id) {
-        var str = `<div class="modal fade" id="${this.bgModalId}" role="dialog">
+        var str = `<div class="modal fade canvas-div" id="${this.bgModalId}" role="dialog">
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header">
@@ -609,8 +605,8 @@ var vcanvas = /** @class */ (function () {
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-9 col-xs-12">
-                        <div class="col-md-12 col-xs-12">
+                    <div class="col-sm-9 col-xs-12 canvas-div">
+                        <div class="col-md-12 col-xs-12 canvas-div">
                             ${this.types.map(t => `
                             ${(t == types.Rect) ? `<button type="button" class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>` : ``}
                             ${(t == types.VLine || t == types.Line) ? `<button type="button" class="btn btn-sm btn-success" id="${this.btnAddVerticalLineId}"><i class="fa fa-arrows-v"></i> Add vertical line</button>` : ``}
@@ -619,28 +615,28 @@ var vcanvas = /** @class */ (function () {
                             `)
             }
                         </div>
-                        <div class="col-md-12 col-xs-12">
+                        <div class="col-md-12 col-xs-12 canvas-div">
                             <button type="button" class="btn btn-sm" id="${this.btnZoomInId}"><i class="fa fa-search-plus"></i> Zoom in</button>
                             <button type="button" class="btn btn-sm" id="${this.btnZoomOutId}"><i class="fa fa-search-minus"></i> Zoom out</button>
                             <button type="button" class="btn btn-sm btn-default" id="${this.btnResetZoomId}"><i class="fa fa-history"></i> Reset zoom</button>
                             <button type="button" class="btn btn-sm btn-default" id="${this.btnAddBackgroundId}" data-toggle="modal" data-target="#${this.bgModalId}"><i class="fa fa-file-image-o"></i> Change background</button>
                             <label class="${this.lblNoteId}" style="padding-left: 20px; color: red;" id="${this.lblNoteId}"></label>
-                            <input type="text" name="${this.txtNameId}" id="${this.txtNameId}" hidden="true" width="10">
-                            <input type="text" name="${this.txtDataId}" id="${this.txtDataId}" hidden="true" width="10">
+                            <input class="canvas-input" type="text" name="${this.txtNameId}" id="${this.txtNameId}" hidden="true" width="10">
+                            <input class="canvas-input" type="text" name="${this.txtDataId}" id="${this.txtDataId}" hidden="true" width="10">
                         </div>
-                        <div class="col-xs-12 col-md-12">
+                        <div class="col-xs-12 col-md-12 canvas-div">
                             <div id="${this.wrapperId}">
                                 <canvas id="${this.canvasId}">
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-sm-3 col-xs-12">
-                        <div class="col-sm-12">
+                    <div class="col-sm-3 col-xs-12 canvas-div">
+                        <div class="col-sm-12 canvas-div">
                         <button type="button" class="btn btn-sm btn-success" id="${this.btnExportId}"><i class="fa fa-cloud-download"></i> Export to JSON</button>
                         <button type="button" class="btn btn-sm btn-default" id="${this.btnNewColumnId}" data-toggle="modal" data-target="#${this.AddColumnModalId}"><i class="fa fa-plus"></i> Add column</button>
                         </div>
-                        <div class="col-sm-12">
+                        <div class="col-sm-12 canvas-div">
                             <div id="${this.tableWrapperId}" class="table-editable">
                             <table id="${this.tableId}" class="tblShape table table-hover table-sm text-center">
                                 <thead>
@@ -669,7 +665,7 @@ var vcanvas = /** @class */ (function () {
                                     <form class="form-row align-items-center">
                                         <div class="col-sm-4">
                                             <label for="${this.txtNameColumnId}">Name</label>
-                                            <input id="${this.txtNameColumnId}" class="form-control form-control-sm" placeholder="">
+                                            <input id="${this.txtNameColumnId}" class="canvas-input form-control form-control-sm" placeholder="">
                                         </div>
                                         <div class="col-sm-4">
                                             <label for="${this.AddColumnmodalErrorId}">Type</label>
@@ -755,9 +751,9 @@ var vcanvas = /** @class */ (function () {
                     if (element.id == '0') {
                         var shapeName = element.parentElement.cells[1].children[0].value;
                         if (newColumn.type == typeColumns.Text)
-                            context = `<input id="${mother.id + '-' + shapeName + '-input-' + newColumn.name}"  type="text" size="4" style="border:none"/>`;
+                            context = `<input id="${mother.id + '-' + shapeName + '-input-' + newColumn.name}" class="canvas-input" type="text" size="4" style="border:none"/>`;
                         if (newColumn.type == typeColumns.Number) {
-                            context = `<input id="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" name="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" class="ui-spinner-input" style="border:none"/>`;
+                            context = `<input id="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" name="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" class="canvas-input ui-spinner-input" style="border:none"/>`;
                             $(`#${mother.id + '-' + shapeName + '-number-' + newColumn.name}`).click(function () {
                                 alert('clicked');
                             });
@@ -768,7 +764,7 @@ var vcanvas = /** @class */ (function () {
                         `)}</select>`;
                         }
                         if (newColumn.type == typeColumns.Checkbox)
-                            context = `<input id="${mother.id + '-' + shapeName + '-checkbox-' + newColumn.name}"  type="checkbox"/>`;
+                            context = `<input class="canvas-input" id="${mother.id + '-' + shapeName + '-checkbox-' + newColumn.name}"  type="checkbox"/>`;
                         $(element).before(`<td>${context}</td>`);
                     }
                 });
@@ -1321,8 +1317,8 @@ var Shape = /** @class */ (function () {
         if (!this.lbX && !this.lbY) {
             for (var i = 0; i < this.points.length; i++) {
                 if (this.points[i].name == "P-1") {
-                    this.lbX = this.points[i].left + 5;
-                    this.lbY = this.points[i].top - 30;
+                    this.lbX = this.points[i].left - 5;
+                    this.lbY = this.points[i].top - 40;
                     break;
                 }
             }
@@ -1330,7 +1326,7 @@ var Shape = /** @class */ (function () {
         var context = '';
         if (data) context = this.name + '( ' + data + ' )';
         else context = this.name;
-        var label = new fabric.Text(context, {
+        var label = new fabric.IText(context, {
             name: "lb-" + this.name,
             parentName: this.name,
             left: this.lbX,
@@ -1338,6 +1334,8 @@ var Shape = /** @class */ (function () {
             fontSize: 40,
             fontFamily: "calibri",
             fill: this.color,
+            stroke: 'black',
+            strokeWidth: 0.1,
             hasRotatingPoint: false,
             centerTransform: true,
             selectable: true

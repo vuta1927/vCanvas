@@ -58,34 +58,9 @@
 	color: #f00;
 }
 
-div {
+.canvas-div {
 	padding-top: 5px;
 }
-
-@media screen and (max-width:991px) {
-	#pakete .box {
-		overflow: auto;
-		min-width: 0;
-		width: 100%
-	}
-	#pakete .box table {
-		width: 950px;
-	}
-	.rotate {
-		margin: 0!important;
-		position: absolute;
-		top: 100px!important;
-		left: auto!important;
-		right: -150px!important;
-		width: 200px!important;
-	}
-	.front {
-		position: relative;
-		width: 950px;
-		padding-right: 200px;
-	}
-}
-
 .switch {
 	position: relative;
 	display: inline-block;
@@ -132,7 +107,7 @@ table tr {
 	font-size: 13px;
 }
 
-input {
+.canvas-input {
 	text-align: center;
 }
 

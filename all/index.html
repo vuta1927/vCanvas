@@ -30,18 +30,17 @@
 	<script type="text/javascript" src="js/myCanvas.js"></script>
 	<script src="js/sample.js"></script>
 	<script type="text/javascript">
-		var c0 = myCanvas.Create({ parent: "wrapperMain0", types: [types.HLine] });
-		c0.on('CanvasModified', function (e) {
+		//console.log(c0.id);
+		var c1 = new myCanvas({ parent: "wrapperMain1", json: sample});
+		c1.on('CanvasModified', function (e) {
 			// e.event: name of event
 			// e.source
 			
-			console.log(e.event, c0.ToJson());
+			console.log(e.event, c1.ToJson());
         });
-		//console.log(c0.id);
-		var c1 = myCanvas.Create({ parent: "wrapperMain1", json: sample});
-		var c2 = myCanvas.Create({ parent: "wrapperMain2", types: [types.Rect] });
-		var c3 = myCanvas.Create({ parent: "wrapperMain3", types: [types.Line] });
-		var c4 = myCanvas.Create({ parent: "wrapperMain4", types: [types.HLine, types.VLine] });
+		// var c2 = new myCanvas({ parent: "wrapperMain2", types: [types.Rect] });
+		// var c3 = new myCanvas({ parent: "wrapperMain3", types: [types.Line] });
+		// var c4 = new myCanvas({ parent: "wrapperMain4", types: [types.HLine, types.VLine] });
 		// console.log(c1.ToJson());
 	</script>
 </body>

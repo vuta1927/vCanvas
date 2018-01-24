@@ -14,16 +14,25 @@ ExtendOtions = [];
 globalScaleValue = 1;
 globalStrokeWidth = 3;
 canvasCollection = [];
-var myCanvas = (function () {
-
-    function myCanvas(params) {
+globalImageWidth = 1;
+globalImageHeight = 1;
+replaceValues = [];
+colors = {
+    Rect: 'green',
+    Line: 'pink',
+    VerticalLine: 'blue',
+    HorizontalLine: 'yellow'
+};
+(function () {
+    function Create(params) {
         var properties = $.extend({
             json: null,
             parent: null,
             backgroundUrl: null,
             types: [],
             extColumns: [],
-            maxShape: 5
+            maxShape: null,
+            randomColor: false,
         }, params);
         var json = properties.json;
         var parentId = properties.parent;
@@ -31,6 +40,8 @@ var myCanvas = (function () {
         var types = properties.types;
         var extColumns = properties.extColumns;
         var maxShape = properties.maxShape;
+        var randomColor = properties.randomColor;
+
         var newCanvas = new vcanvas({
             id: GenerateId(),
             types: types,
@@ -38,7 +49,8 @@ var myCanvas = (function () {
             backgroundUrl: backgroundUrl,
             js: json,
             extColumns: extColumns,
-            max: maxShape
+            maxShape: maxShape,
+            randomColor: randomColor
         });
         canvasCollection.push(newCanvas);
         return newCanvas;
@@ -50,8 +62,11 @@ var myCanvas = (function () {
             index++;
         });
         return `vcanvas-${index}`;
+    };
+    myCanvas = {
+        Create: Create,
+        GenerateId: GenerateId
     }
-    return myCanvas;
 })();
 var extColumn = (function () {
     function extColumn(params) {
@@ -68,7 +83,6 @@ var extColumn = (function () {
 }());
 var vcanvas = /** @class */ (function () {
     var _triggers = {};
-    var replaceValues = [];
 
     function vcanvas(params) {
         var properties = $.extend({
@@ -94,7 +108,8 @@ var vcanvas = /** @class */ (function () {
             extColumns: [],
             currentWidth: null,
             currentHeight: null,
-            max: null
+            maxShape: null,
+            randomColor: null
         }, params);
         this.id = properties.id;
         this.parent = properties.parent; //id, ex: <div id='containner'>
@@ -113,7 +128,8 @@ var vcanvas = /** @class */ (function () {
         this.extColumns = properties.extColumns;
         this.currentHeight = properties.currentHeight;
         this.currentWidth = properties.currentWidth;
-        this.max = properties.max;
+        this.maxShape = properties.maxShape;
+        this.randomColor = properties.randomColor;
         this.init(this.js);
     }
 
@@ -155,7 +171,7 @@ var vcanvas = /** @class */ (function () {
     vcanvas.prototype.initCss = function () {
         var style = document.createElement('style');
         style.type = 'text/css';
-        style.innerHTML = `#${this.wrapperId}{ overflow:auto; }
+        style.innerHTML = `#${this.wrapperId}{ overflow:none; }
         #${this.canvasId}{
             /*border: 1px solid black;	*/
             border: 1px solid black;
@@ -172,7 +188,10 @@ var vcanvas = /** @class */ (function () {
             this.types = RawData.types;
             this.backgroundUrl = RawData.backgroundUrl ? RawData.backgroundUrl : '';
             this.extColumns = RawData.extColumns;
+            this.maxShape = RawData.maxShape;
             ExtendOtions = RawData.extColumns;
+            if (!this.randomColor)
+                this.randomColor = RawData.randomColor;
             this.htmlRender();
             if (!this.canvas) {
                 this.canvas = new fabric.Canvas(this.id + '-canvas', {
@@ -183,15 +202,20 @@ var vcanvas = /** @class */ (function () {
                 fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
             };
 
+            this.canvas.renderAll();
             for (var i = 0; i < RawData.shapes.length; i++) {
-                var color = '#' + getRandomColor();
                 var s = RawData.shapes[i];
                 var newShape = new Shape({
                     name: s.name,
                     type: s.type,
-                    color: color,
                     canvas: this.canvas
                 });
+                if (!this.randomColor) {
+                    if (newShape.type == types.Rect) newShape.color = colors.Rect;
+                    if (newShape.type == types.Line) newShape.color = colors.Line;
+                    if (newShape.type == types.VLine) newShape.color = colors.VerticalLine;
+                    if (newShape.type == types.HLine) newShape.color = colors.HorizontalLine;
+                }
                 for (var j = 0; j < s.points.length; j++) {
                     var p = s.points[j];
                     var newPoint = new Point({
@@ -199,9 +223,7 @@ var vcanvas = /** @class */ (function () {
                         parentName: s.name,
                         left: p.left,
                         top: p.top,
-                        index: p.index,
-                        fill: color,
-                        stroke: color
+                        index: p.index
                         // lockMovementX:(RawData.shapes[i].type === types.HLine)? false:true,
                         // lockMovementY:(RawData.shapes[i].type === types.VLine)? false: true
                     });
@@ -225,8 +247,8 @@ var vcanvas = /** @class */ (function () {
                 }
                 newShape.lbX = s.lbX;
                 newShape.lbY = s.lbY;
+                this.LoadBackground(this.backgroundUrl);
                 this.shapes.push(newShape);
-                newShape.Draw();
             }
         } else {
             this.htmlRender();
@@ -236,12 +258,16 @@ var vcanvas = /** @class */ (function () {
                 selection: false,
                 controlsAboveOverlay: false
             });
+            this.LoadBackground(this.backgroundUrl);
             fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
             fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
         }
-        this.LoadBackground(this.backgroundUrl);
         this.initEvent();
         this.loadDataToTable();
+        
+        this.shapes.forEach(function(shape){
+            shape.Draw();
+        })
         return vcanvas;
     };
     vcanvas.prototype.on = function (event, callback) {
@@ -267,6 +293,7 @@ var vcanvas = /** @class */ (function () {
                     mother.LoadBackground({
                         url: url
                     });
+                    mother.Reset();
                 } else {
                     $('#' + mother.bgModalId).modal('show');
                     $('#' + mother.modalErrorId).text("");
@@ -275,8 +302,15 @@ var vcanvas = /** @class */ (function () {
 
             })
             $('#' + mother.btnAddRectId).click(function () {
-                if(mother.shapes.length == mother.max && mother.max > 0){
-                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                url = mother.backgroundUrl;
+                if (!url) {
+                    $('#' + mother.bgModalId).modal('show');
+                    $('#' + mother.modalErrorId).text("");
+                    $('#' + mother.modalErrorId).text("There are no image yet. Please enter your image url to add image!");
+                    return;
+                }
+                if (mother.shapes.length == mother.maxShape && mother.maxShape > 0) {
+                    alert("You have reach to the limit of shapes, please change the max size value for drawing more!");
                     return;
                 }
                 mother.Add({
@@ -285,8 +319,15 @@ var vcanvas = /** @class */ (function () {
             });
 
             $('#' + mother.btnAddVerticalLineId).click(function () {
-                if(mother.shapes.length == mother.max && mother.max > 0){
-                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                url = mother.backgroundUrl;
+                if (!url) {
+                    $('#' + mother.bgModalId).modal('show');
+                    $('#' + mother.modalErrorId).text("");
+                    $('#' + mother.modalErrorId).text("There are no image yet. Please enter your image url to add image!");
+                    return;
+                }
+                if (mother.shapes.length == mother.maxShape && mother.maxShape > 0) {
+                    alert("You have reach to the limit of shapes, please change the max size value for drawing more!");
                     return;
                 }
                 mother.Add({
@@ -295,8 +336,15 @@ var vcanvas = /** @class */ (function () {
             });
 
             $('#' + mother.btnAddHorizontalLineId).click(function () {
-                if(mother.shapes.length == mother.max && mother.max > 0){
-                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                url = mother.backgroundUrl;
+                if (!url) {
+                    $('#' + mother.bgModalId).modal('show');
+                    $('#' + mother.modalErrorId).text("");
+                    $('#' + mother.modalErrorId).text("There are no image yet. Please enter your image url to add image!");
+                    return;
+                }
+                if (mother.shapes.length == mother.maxShape && mother.maxShape > 0) {
+                    alert("You have reach to the limit of shapes, please change the max size value for drawing more!");
                     return;
                 }
                 mother.Add({
@@ -305,15 +353,22 @@ var vcanvas = /** @class */ (function () {
             });
 
             $('#' + mother.btnDrawLineId).click(function () {
-                if(mother.shapes.length == mother.max && mother.max > 0){
-                    alert("You have come to the limit of shapes, please change the max size value for drawing more!");
+                url = mother.backgroundUrl;
+                if (!url) {
+                    $('#' + mother.bgModalId).modal('show');
+                    $('#' + mother.modalErrorId).text("");
+                    $('#' + mother.modalErrorId).text("There are no image yet. Please enter your image url to add image!");
+                    return;
+                }
+                if (mother.shapes.length == mother.maxShape && mother.maxShape > 0) {
+                    alert("You have reach to the limit of shapes, please change the max size value for drawing more!");
                     return;
                 }
                 mother.isDrawing = true;
             });
             $('#' + mother.btnExportId).click(function () {
                 var js = mother.ToJson();
-                console.log(js);
+                //console.log(js);
                 $('#' + mother.txtDataId).val(js);
             });
             $('#' + mother.btnResetZoomId).click(function () {
@@ -325,14 +380,56 @@ var vcanvas = /** @class */ (function () {
                 } else {
                     mother.canvas.setZoom(0.51);
                 }
+                var objects = c.getObjects();
+                for (var i in objects) {
+                    if (objects[i].get('type') == 'image' || objects[i].get('type') == "path") continue;
 
+                    if (objects[i].get('type') == "line") {
+                        objects[i].strokeWidth = 3;
+                        globalStrokeWidth = objects[i].strokeWidth;
+                        continue;
+                    }
+                    objects[i].scaleX /= 1.1;
+                    objects[i].scaleY /= 1.1;
+                    globalScaleValue = objects[i].scaleX;
+                    objects[i].setCoords();
+
+                }
                 mother.canvas.renderAll();
             })
             $('#' + mother.btnZoomInId).click(function () {
                 mother.canvas.setZoom(mother.canvas.getZoom() * 1.1);
+                var objects = c.getObjects();
+                for (var i in objects) {
+                    if (objects[i].get('type') == "line") {
+                        objects[i].strokeWidth /= 1.1;
+                        globalStrokeWidth = objects[i].strokeWidth;
+                        continue;
+                    }
+                    if (objects[i].get('type') == 'image' || objects[i].get('type') == "path") continue;
+                    objects[i].scaleX /= 1.1;
+                    objects[i].scaleY /= 1.1;
+                    globalScaleValue = objects[i].scaleX;
+                    objects[i].setCoords();
+
+                }
             })
             $('#' + mother.btnZoomOutId).click(function () {
                 mother.canvas.setZoom(mother.canvas.getZoom() / 1.1);
+                var objects = c.getObjects();
+                for (var i in objects) {
+                    if (objects[i].get('type') == "line") {
+                        objects[i].strokeWidth *= 1.1;
+                        globalStrokeWidth = objects[i].strokeWidth;
+                        continue;
+                    }
+                    if (objects[i].get('type') == 'image' || objects[i].get('type') == "path") continue;
+                    objects[i].scaleX *= 1.1;
+                    objects[i].scaleY *= 1.1;
+                    globalScaleValue = objects[i].scaleX;
+                    objects[i].setCoords();
+
+                }
             })
             $(c.wrapperEl).on('mousewheel', function (e) {
                 var delta = e.originalEvent.wheelDelta / 500;
@@ -342,12 +439,11 @@ var vcanvas = /** @class */ (function () {
                 if (delta > 0) {
                     scaleFactor = c.getZoom() * 1.1;
                     c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), scaleFactor);
-                    console.log('Zoom in', delta, c.getZoom() * 1.1);
                     for (var i in objects) {
-                        if(objects[i].get('type') == 'image' || objects[i].get('type')=="path") continue;
-                        
-                        if(objects[i].get('type')=="line"){
-                            objects[i].strokeWidth /=1.1;
+                        if (objects[i].get('type') == 'image' || objects[i].get('type') == "path") continue;
+
+                        if (objects[i].get('type') == "line") {
+                            objects[i].strokeWidth /= 1.1;
                             globalStrokeWidth = objects[i].strokeWidth;
                             continue;
                         }
@@ -355,30 +451,29 @@ var vcanvas = /** @class */ (function () {
                         objects[i].scaleY /= 1.1;
                         globalScaleValue = objects[i].scaleX;
                         objects[i].setCoords();
-                        console.log(objects[i].name,objects[i].scaleX, objects[i].scaleY);
+
                     }
                 }
                 if (delta < 0) {
                     scaleFactor = c.getZoom() / 1.1;
                     c.zoomToPoint(new fabric.Point(e.offsetX, e.offsetY), scaleFactor);
-                    console.log('Zoom out', delta, c.getZoom() / 1.1);
                     for (var i in objects) {
-                        if(objects[i].get('type')=="line"){
-                            objects[i].strokeWidth *=1.1;
+                        if (objects[i].get('type') == "line") {
+                            objects[i].strokeWidth *= 1.1;
                             globalStrokeWidth = objects[i].strokeWidth;
                             continue;
                         }
-                        if(objects[i].get('type') == 'image' || objects[i].get('type')=="path") continue;
+                        if (objects[i].get('type') == 'image' || objects[i].get('type') == "path") continue;
                         objects[i].scaleX *= 1.1;
                         objects[i].scaleY *= 1.1;
                         globalScaleValue = objects[i].scaleX;
                         objects[i].setCoords();
-                        console.log(objects[i].name,objects[i].scaleX, objects[i].scaleY);
+
                     }
                 }
-                
-                
-                
+
+
+
                 return false;
             });
             if (c.width != $("#" + mother.id + '-wrapper').width()) {
@@ -452,7 +547,10 @@ var vcanvas = /** @class */ (function () {
                         points: [A, B],
                         canvas: c
                     });
-                    line.Draw({scaleFactor:globalScaleValue, strokeWidth: globalStrokeWidth});
+                    line.Draw({
+                        scaleFactor: globalScaleValue,
+                        strokeWidth: globalStrokeWidth
+                    });
                     mother.ActiveObject = line;
                 } else if (mother.AddPointMode) {
                     var newPoint = new Point({
@@ -486,7 +584,10 @@ var vcanvas = /** @class */ (function () {
                             mother.ActiveObject.points[i].top = pointer.y;
                         }
                     }
-                    mother.ActiveObject.Draw();
+                    mother.ActiveObject.Draw({
+                        scaleFactor: globalScaleValue,
+                        strokeWidth: globalStrokeWidth
+                    });
                     //line.set({ x2: pointer.x, y2: pointer.y });
                     c.renderAll();
                 }
@@ -520,9 +621,12 @@ var vcanvas = /** @class */ (function () {
             'mouse:up': function (o) {
                 if (mother.isDrawing) {
                     mother.ActiveObject.Remove();
-                    mother.ActiveObject.Draw({scaleFactor:globalScaleValue, strokeWidth: globalStrokeWidth});
+                    mother.ActiveObject.Draw({
+                        scaleFactor: globalScaleValue,
+                        strokeWidth: globalStrokeWidth
+                    });
                     mother.shapes.push(mother.ActiveObject);
-                    mother.canvas.renderAll();
+                    // mother.canvas.renderAll();
                     mother.loadDataToTable();
                     mother.triggerHandler('CanvasModified', {
                         event: 'AddLine',
@@ -543,7 +647,6 @@ var vcanvas = /** @class */ (function () {
             },
             'object:moving': function (e) {
                 var p = e.target;
-                console.log('moving', p.scaleX, p.scaleY, p.zoomX, p.zoomY);
                 var obj = e.target;
                 var scaleValue = p.scaleX;
                 var pointer = c.getPointer(e.e);
@@ -554,13 +657,9 @@ var vcanvas = /** @class */ (function () {
                             mother.ActiveObject = mother.shapes[i];
                             mother.ActiveObject.isMoving = true;
                             var img = mother.getItem('background', null);
-                            var scaleFactor = 1;
-                            if (img) {
-                                scaleFactor = mother.currentWidth / img.width;
-                            }
                             mother.shapes[i].Move({
                                 offsetX: e.e.movementX * globalStrokeWidth,
-                                offsetY: e.e.movementY* globalStrokeWidth,
+                                offsetY: e.e.movementY * globalStrokeWidth,
                                 scaleFactor: globalScaleValue,
                                 strokeWidth: globalStrokeWidth
                             });
@@ -618,7 +717,7 @@ var vcanvas = /** @class */ (function () {
                         <div class="col-md-12 col-xs-12 canvas-div">
                             <button type="button" class="btn btn-sm" id="${this.btnZoomInId}"><i class="fa fa-search-plus"></i> Zoom in</button>
                             <button type="button" class="btn btn-sm" id="${this.btnZoomOutId}"><i class="fa fa-search-minus"></i> Zoom out</button>
-                            <button type="button" class="btn btn-sm btn-default" id="${this.btnResetZoomId}"><i class="fa fa-history"></i> Reset zoom</button>
+                            <button type="button" class="btn btn-sm btn-default" id="${this.btnResetZoomId}" hidden="true"><i class="fa fa-history"></i> Reset zoom</button>
                             <button type="button" class="btn btn-sm btn-default" id="${this.btnAddBackgroundId}" data-toggle="modal" data-target="#${this.bgModalId}"><i class="fa fa-file-image-o"></i> Change background</button>
                             <label class="${this.lblNoteId}" style="padding-left: 20px; color: red;" id="${this.lblNoteId}"></label>
                             <input class="canvas-input" type="text" name="${this.txtNameId}" id="${this.txtNameId}" hidden="true" width="10">
@@ -741,13 +840,13 @@ var vcanvas = /** @class */ (function () {
                 });
                 var context;
                 myTable.find('th').each(function (i, element) {
-                    console.log(element.id);
+                    //console.log(element.id);
                     if (element.id == '0')
                         $(element).before(`<th>${newColumn.name}</th>`);
 
                 });
                 myTable.find('td').each(function (i, element) {
-                    console.log(element.id);
+                    //console.log(element.id);
                     if (element.id == '0') {
                         var shapeName = element.parentElement.cells[1].children[0].value;
                         if (newColumn.type == typeColumns.Text)
@@ -773,16 +872,32 @@ var vcanvas = /** @class */ (function () {
                     mother.extColumns.forEach(function (c) {
                         $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function () {
                             s[c.name] = this.value;
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " change",
+                                source: mother
+                            });
                         });
                         $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
                             // var element = this;
                             s[c.name] = this.value //spinner.spinner(mother.id + '-' + s.name + '-number-' + c.name);
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " change",
+                                source: mother
+                            });
                         });
                         $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
                             s[c.name] = this.value;
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " change",
+                                source: mother
+                            });
                         });
                         $(`#${mother.id + '-' + s.name + '-checkbox-' + c.name}`).change(function () {
                             s[c.name] = this.value;
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " change",
+                                source: mother
+                            });
                         });
                         mother.extColumns.forEach(function (c) {
                             $('#' + mother.id + '-' + s.name + '-number-' + c.name).spinner({
@@ -792,8 +907,15 @@ var vcanvas = /** @class */ (function () {
                                 change: function (event, ui) {
                                     var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
                                     s[c.name] = element.value;
+                                    mother.triggerHandler('CanvasModified', {
+                                        event: c.name + " change",
+                                        source: mother
+                                    });
                                     s.Remove();
-                                    s.Draw();
+                                    s.Draw({
+                                        scaleFactor: globalScaleValue,
+                                        strokeWidth: globalStrokeWidth
+                                    });
                                 }
                             });
                         });
@@ -807,6 +929,32 @@ var vcanvas = /** @class */ (function () {
                 $('#' + mother.AddColumnmodalErrorId).text("please enter a valid name for column!");
             }
         });
+    }
+    vcanvas.prototype.Reset = function () {
+        this.canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+        var img = this.getItem('background', null);
+        if (img) {
+            var scaleFactor = this.currentWidth / img.width;
+            this.canvas.setZoom(scaleFactor / 1.1);
+        } else {
+            this.canvas.setZoom(0.51);
+        }
+        var objects = this.canvas.getObjects();
+        for (var i in objects) {
+            if (objects[i].get('type') == 'image' || objects[i].get('type') == "path") continue;
+
+            if (objects[i].get('type') == "line") {
+                objects[i].strokeWidth = 3;
+                globalStrokeWidth = objects[i].strokeWidth;
+                continue;
+            }
+            objects[i].scaleX /= 1.1;
+            objects[i].scaleY /= 1.1;
+            globalScaleValue = objects[i].scaleX;
+            objects[i].setCoords();
+
+        }
+        this.canvas.renderAll();
     }
     vcanvas.prototype.loadDataToTable = function () {
         var mother = this;
@@ -881,7 +1029,6 @@ var vcanvas = /** @class */ (function () {
         }).remove();
         $('#' + this.tableId + ' tr:last').after(context);
         mother.shapes.forEach(function (s) {
-
             $('#' + mother.id + '-' + s.name + '-input-' + s.name).click(function () {
                 mother.onInputClicked(s)
             });
@@ -889,13 +1036,13 @@ var vcanvas = /** @class */ (function () {
                 return mother.ValidateKey()
             });
             $('#' + mother.id + '-' + s.name + '-input-' + s.name).change(function () {
-                mother.textChange(mother.id + '-' + s.name + '-input-' + s.name)
+                mother.textChange(mother.id + '-' + s.name + '-input-' + s.name);
             });
             $('#' + mother.id + '-' + s.name + '-switch-' + s.name).change(function () {
-                mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name)
+                mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name);
             });
             $('#' + mother.id + '-' + s.name + '-spanRemoveShape-' + s.name).click(function () {
-                mother.onRemoveShapeClicked(s)
+                mother.onRemoveShapeClicked(s);
             });
             s.points.forEach(function (p) {
                 $('#' + mother.id + '-' + s.name + '-tr-' + p.name).click(function () {
@@ -911,25 +1058,54 @@ var vcanvas = /** @class */ (function () {
                         change: function () {
                             var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
                             s[c.name] = element.value;
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " change",
+                                source: mother
+                            });
                             s.Remove();
-                            s.Draw();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
                         }
                     });
                     $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
                         var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
                         s[c.name] = element.value;
+                        mother.triggerHandler('CanvasModified', {
+                            event: c.name + " change",
+                            source: mother
+                        });
                         s.Remove();
-                        s.Draw();
+                        s.Draw({
+                            scaleFactor: globalScaleValue,
+                            strokeWidth: globalStrokeWidth
+                        });
                     });
+                    if (c.type == typeColumns.Combobox) {
+                        var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
+                        s[c.name] = element.value;
+                    }
                     $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
                         var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
-                        alert(element.value);
+                        s[c.name] = element.value;
+                        mother.triggerHandler('CanvasModified', {
+                            event: c.name + " change",
+                            source: mother
+                        });
                     });
                     $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function () {
                         var element = document.getElementById(mother.id + '-' + s.name + '-input-' + c.name);
                         s[c.name] = element.value;
+                        mother.triggerHandler('CanvasModified', {
+                            event: c.name + " change",
+                            source: mother
+                        });
                         s.Remove();
-                        s.Draw();
+                        s.Draw({
+                            scaleFactor: globalScaleValue,
+                            strokeWidth: globalStrokeWidth
+                        });
                     });
                 });
             }
@@ -1056,7 +1232,34 @@ var vcanvas = /** @class */ (function () {
     vcanvas.prototype.ToJson = function () {
         var temp = Object.assign({}, this);
         this.RemoveProperties(temp);
-        var js = JSON.stringify(temp, this.replacer);
+        var ExportObject = {};
+        ExportObject.types = this.types;
+        ExportObject.backgroundUrl = this.backgroundUrl;
+        ExportObject.extColumns = this.extColumns;
+        ExportObject.maxShape = this.maxShape;
+        ExportObject.shapes = [];
+        ExportObject.randomColor = this.randomColor;
+        var extendColumns = this.extColumns;
+        var image = this.background;
+        this.shapes.forEach(function (shape) {
+            var ShapeExportObj = {};
+            extendColumns.forEach(function (column) {
+                ShapeExportObj[column.name] = shape[column.name] ? shape[column.name] : null;
+            });
+            ShapeExportObj.name = shape.name;
+            ShapeExportObj.type = shape.type;
+            ShapeExportObj.points = [];
+            shape.points.forEach(function (point) {
+                ShapeExportObj.points.push({
+                    index: point.index,
+                    name: point.name,
+                    left: parseFloat((point.left / image.width) * 100).toFixed(2),
+                    top: parseFloat((point.top / image.width) * 100).toFixed(2)
+                });
+            });
+            ExportObject.shapes.push(ShapeExportObj);
+        });
+        var js = JSON.stringify(ExportObject);
         return js;
     }
     vcanvas.prototype.RemoveProperties = function (obj) {
@@ -1078,14 +1281,23 @@ var vcanvas = /** @class */ (function () {
             name: result.name,
             canvas: this.canvas
         });
-        if (type === types.Rect) {
+        if (type == types.Rect) {
             newShape.Rect();
-        } else if (type === types.VLine) {
+        } else if (type == types.VLine) {
             newShape.VerticalLine();
-        } else if (type === types.HLine) {
+        } else if (type == types.HLine) {
             newShape.HorizontalLine();
         }
-        newShape.Draw({scaleFactor:globalScaleValue});
+        if (!this.randomColor) {
+            if (type == types.Rect) newShape.color = colors.Rect;
+            if (type == types.VLine) newShape.color = colors.VerticalLine;
+            if (type == types.HLine) newShape.color = colors.HorizontalLine;
+            if (type == types.Line) newShape.color = colors.Line;
+        }
+        newShape.Draw({
+            scaleFactor: globalScaleValue,
+            strokeWidth: globalStrokeWidth
+        });
         this.shapes.push(newShape);
         this.loadDataToTable();
         this.triggerHandler("CanvasModified", {
@@ -1170,25 +1382,34 @@ var vcanvas = /** @class */ (function () {
         var c = this.canvas;
         this.backgroundUrl = properties.url;
         bgr.url = this.backgroundUrl;
-        var bgImg = this.getItem('background', null);
-        this.canvas.remove(bgImg);
-        fabric.Image.fromURL(this.backgroundUrl, function (img) {
+        var bgImg = c.getItem('background', null);
+        var oldImgWidth = null;
+        var oldImgHeight = null;
+        if (bgImg) {
+            oldImgWidth = bgImg.width;
+            oldImgHeight = bgImg.height;
+            this.canvas.remove(bgImg);
+        }
+        fabric.Image.fromURL(properties.url, function (img) {
             img.selectable = false;
             img.set({
                 name: 'background',
                 left: 0,
                 top: 0
             });
-            bgr.height = img.height;
-            bgr.width = img.width;
+            globalImageHeight = bgr.height = img.height;
+            globalImageWidth = bgr.width = img.width;
+            c.add(img);
+            c.sendToBack(img)
+
             // if(img.height)
             //     c.setDimensions({height: img.height, width:img.width});
-            c.add(img);
             // c.setZoom(0.51);
-            c.sendToBack(img);
             //c.setBackgroundImage(img, c.renderAll.bind(c));
-            // c.renderAll();
+            c.renderAll();
         });
+
+
         this.background = bgr;
     };
     vcanvas.prototype.Remove = function (object) {
@@ -1267,7 +1488,7 @@ var Point = /** @class */ (function () {
             parentName: this.parentName,
             hoverCursor: "pointer"
         });
-        if(scaleFactor){
+        if (scaleFactor) {
             p.scaleX = scaleFactor;
             p.scaleY = scaleFactor;
         }
@@ -1335,12 +1556,12 @@ var Shape = /** @class */ (function () {
             fontFamily: "calibri",
             fill: this.color,
             stroke: 'black',
-            strokeWidth: 0.1,
+            strokeWidth: 0.2,
             hasRotatingPoint: false,
             centerTransform: true,
             selectable: true
         });
-        if (scaleFactor){
+        if (scaleFactor) {
             label.scaleX = scaleFactor;
             label.scaleY = scaleFactor;
         }
@@ -1349,12 +1570,13 @@ var Shape = /** @class */ (function () {
     };
     Shape.prototype.Rect = function () {
         this.type = types.Rect;
+
         var p1 = new Point({
             index: 0,
             name: "P-1",
             parentName: this.name,
-            left: 175,
-            top: 175,
+            left: 10, //175
+            top: 10, //175
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1363,8 +1585,8 @@ var Shape = /** @class */ (function () {
             index: 1,
             name: "P-2",
             parentName: this.name,
-            left: 350,
-            top: 175,
+            left: 40, //350
+            top: 10, //175
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1373,8 +1595,8 @@ var Shape = /** @class */ (function () {
             index: 2,
             name: "P-3",
             parentName: this.name,
-            left: 350,
-            top: 300,
+            left: 40, //350
+            top: 35, //300
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1383,8 +1605,8 @@ var Shape = /** @class */ (function () {
             index: 3,
             name: "P-4",
             parentName: this.name,
-            left: 175,
-            top: 300,
+            left: 10,
+            top: 35,
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1398,8 +1620,8 @@ var Shape = /** @class */ (function () {
                     index: 0,
                     name: "P-1",
                     parentName: this.name,
-                    left: 175,
-                    top: 175,
+                    left: GetValueFromPercent(10),
+                    top: 10,
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
@@ -1409,8 +1631,8 @@ var Shape = /** @class */ (function () {
                     index: 1,
                     name: "P-2",
                     parentName: this.name,
-                    left: 175,
-                    top: 500,
+                    left: GetValueFromPercent(10),
+                    top: GetValueFromPercent(35),
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
@@ -1425,8 +1647,8 @@ var Shape = /** @class */ (function () {
                 index: 0,
                 name: "P-1",
                 parentName: this.name,
-                left: 175,
-                top: 175,
+                left: GetValueFromPercent(10),
+                top: GetValueFromPercent(10),
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
@@ -1436,8 +1658,8 @@ var Shape = /** @class */ (function () {
                 index: 1,
                 name: "P-2",
                 parentName: this.name,
-                left: 500,
-                top: 175,
+                left: GetValueFromPercent(35),
+                top: GetValueFromPercent(10),
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
@@ -1449,12 +1671,14 @@ var Shape = /** @class */ (function () {
         var options = $.extend({
             scaleFactor: null,
             strokeWidth: null
-        },params);
+        }, params);
         var scaleFactor = options.scaleFactor;
         var strokeWidth = options.strokeWidth;
         var dlines = {};
         if (this.type == types.Line) {
-            var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
+            var line = new fabric.Line([GetValueFromPercent(this.points[0].left, globalImageWidth), GetValueFromPercent(this.points[0].top, globalImageHeight),
+                GetValueFromPercent(this.points[1].left, globalImageWidth), GetValueFromPercent(this.points[1].top, globalImageHeight)
+            ], {
                 name: this.name,
                 parentName: this.name,
                 fill: this.color,
@@ -1464,16 +1688,18 @@ var Shape = /** @class */ (function () {
                 selectable: false,
                 perPixelTargetFind: true
             });
-            if (strokeWidth){
+            if (strokeWidth) {
                 line.strokeWidth = strokeWidth;
-            }else{
+            } else {
                 line.strokeWidth = 3;
             }
             this.lines = [line.name];
             dlines[line.name] = line;
             this.canvas.add(line);
         } else if (this.type == types.VLine || this.type == types.HLine) {
-            var line = new fabric.Line([this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top], {
+            var line = new fabric.Line([GetValueFromPercent(this.points[0].left, globalImageWidth), GetValueFromPercent(this.points[0].top, globalImageHeight),
+                GetValueFromPercent(this.points[1].left, globalImageWidth), GetValueFromPercent(this.points[1].top, globalImageHeight)
+            ], {
                 name: this.name,
                 parentName: this.name,
                 fill: this.color,
@@ -1482,9 +1708,9 @@ var Shape = /** @class */ (function () {
                 originY: 'center',
                 selectable: false
             });
-            if (strokeWidth){
+            if (strokeWidth) {
                 line.strokeWidth = globalStrokeWidth;
-            }else{
+            } else {
                 line.strokeWidth = 3;
             }
             this.lines = [line.name];
@@ -1496,7 +1722,10 @@ var Shape = /** @class */ (function () {
             for (var i = 0; i < this.points.length; i++) {
                 var line;
                 if (i !== (this.points.length - 1)) {
-                    line = new fabric.Line([this.points[i].left, this.points[i].top, this.points[i + 1].left, this.points[i + 1].top], {
+                    line = new fabric.Line([GetValueFromPercent(this.points[i].left, globalImageWidth),
+                        GetValueFromPercent(this.points[i].top, globalImageHeight),
+                        GetValueFromPercent(this.points[i + 1].left, globalImageWidth), GetValueFromPercent(this.points[i + 1].top, globalImageHeight)
+                    ], {
                         name: "line" + i,
                         parentName: this.name,
                         fill: this.color,
@@ -1509,7 +1738,9 @@ var Shape = /** @class */ (function () {
                         perPixelTargetFind: true
                     });
                 } else {
-                    line = new fabric.Line([this.points[i].left, this.points[i].top, this.points[0].left, this.points[0].top], {
+                    line = new fabric.Line([GetValueFromPercent(this.points[i].left, globalImageWidth), GetValueFromPercent(this.points[i].top, globalImageHeight),
+                        GetValueFromPercent(this.points[0].left, globalImageWidth), GetValueFromPercent(this.points[0].top, globalImageHeight)
+                    ], {
                         name: "line" + i,
                         parentName: this.name,
                         fill: this.color,
@@ -1522,9 +1753,9 @@ var Shape = /** @class */ (function () {
                         perPixelTargetFind: true
                     });
                 }
-                if (globalStrokeWidth){
+                if (globalStrokeWidth) {
                     line.strokeWidth = globalStrokeWidth;
-                }else{
+                } else {
                     line.strokeWidth = 3;
                 }
                 dlines[line.name] = line;
@@ -1542,7 +1773,10 @@ var Shape = /** @class */ (function () {
         for (var i = 0; i < this.points.length; i++) {
             this.points[i].hoverCursor = this.hoverCursor;
             this.points[i].fill = this.color;
-            this.points[i].Draw({canvas:this.canvas, scaleFactor:scaleFactor});
+            this.points[i].Draw({
+                canvas: this.canvas,
+                scaleFactor: scaleFactor
+            });
         }
         var data = '';
         if (ExtendOtions.length > 0) {
@@ -1557,7 +1791,10 @@ var Shape = /** @class */ (function () {
                 }
             }
         }
-        this.DrawLabel({data: data, scaleFactor: scaleFactor});
+        this.DrawLabel({
+            data: data,
+            scaleFactor: scaleFactor
+        });
     };
     Shape.prototype.Move = function (params) {
         var properties = $.extend({
@@ -1587,7 +1824,10 @@ var Shape = /** @class */ (function () {
         } else {
             this.GetNewCoodr(offsetX, offsetY);
         }
-        this.Draw({scaleFactor:scaleFactor, strokeWidth: strokeWidth});
+        this.Draw({
+            scaleFactor: scaleFactor,
+            strokeWidth: strokeWidth
+        });
     }
     Shape.prototype.FillInside = function () {
         var pathDirection = 'M';
@@ -1629,7 +1869,10 @@ var Shape = /** @class */ (function () {
         }
         var label = this.canvas.getItem("lb-" + oldName);
         this.canvas.remove(label);
-        this.Draw();
+        this.Draw({
+            scaleFactor: globalScaleValue,
+            strokeWidth: globalStrokeWidth
+        });
         return this;
     };
     Shape.prototype.AddPoint = function (p) {
@@ -1696,7 +1939,10 @@ var Shape = /** @class */ (function () {
         this.Remove();
         this.points.push(p);
         this.points.sort(this.compare);
-        this.Draw();
+        this.Draw({
+            scaleFactor: globalScaleValue,
+            strokeWidth: globalStrokeWidth
+        });
         this.canvas.renderAll();
     };
     Shape.prototype.compare = function (a, b) {
@@ -1734,7 +1980,10 @@ var Shape = /** @class */ (function () {
         }
         this.Remove();
         this.points.splice(this.points.indexOf(p), 1);
-        this.Draw();
+        this.Draw({
+            scaleFactor: globalScaleValue,
+            strokeWidth: globalStrokeWidth
+        });
     }
     Shape.prototype.Convex = function () { //Kiem tra da giac loi
         var y1, y2;
@@ -1966,4 +2215,12 @@ fabric.Canvas.prototype.getItem = function (name, parentName) {
 
 function getKeyByValue(object, value) {
     return Object.keys(object).find(key => object[key] === value);
+}
+
+function GetPercent(value, total) {
+    return parseFloat((value / total) * 100).toFixed(2);
+}
+
+function GetValueFromPercent(value, total){
+    return parseFloat((value * total) / 100).toFixed(2);
 }

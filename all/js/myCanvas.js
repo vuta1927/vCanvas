@@ -162,11 +162,7 @@ var vcanvas = /** @class */ (function () {
         this.txtNameColumnId = this.id + '-txtNameColumn';
         this.txtDataColumnId = this.id + '-txtDataColumn';
         this.divDataColumnsId = this.id + '-divDataColumns';
-        replaceValues.push('canvas', this.id, this.bgModalId, this.txtImgUrlId, this.modalErrorId, this.btnChangeBackgroundSaveId,
-            this.btnAddRectId, this.btnAddVerticalLineId, this.btnAddHorizontalLineId, 'parent', this.btnDrawLineId, this.btnZoomInId,
-            this.btnZoomOutId, this.btnResetZoomId, this.btnAddBackgroundId, this.btnExportId, this.lblNoteId, this.txtNameId,
-            this.txtDataId, this.wrapperId, this.canvasId, this.tableId, this.tableWrapperId, this.btnNewColumnId, this.AddColumnModalId, this.AddColumnmodalErrorId, this.btnAddColumnSaveId, this.txtNameColumnId, this.selectTypeColumnId, this.txtDataColumnId,
-            this.divDataColumnsId, 'currentWidth', 'currentHeight');
+        this.imgId = this.id + '-img';
     }
     vcanvas.prototype.initCss = function () {
         var style = document.createElement('style');
@@ -203,71 +199,95 @@ var vcanvas = /** @class */ (function () {
             };
 
             this.canvas.renderAll();
-            for (var i = 0; i < RawData.shapes.length; i++) {
-                var s = RawData.shapes[i];
-                var newShape = new Shape({
-                    name: s.name,
-                    type: s.type,
-                    canvas: this.canvas
+            var mother = this;
+            var bgr = new Background();
+            fabric.Image.fromURL(this.backgroundUrl, function (img) {
+                img.selectable = false;
+                img.set({
+                    name: 'background',
+                    left: 0,
+                    top: 0
                 });
-                if (!this.randomColor) {
-                    if (newShape.type == types.Rect) newShape.color = colors.Rect;
-                    if (newShape.type == types.Line) newShape.color = colors.Line;
-                    if (newShape.type == types.VLine) newShape.color = colors.VerticalLine;
-                    if (newShape.type == types.HLine) newShape.color = colors.HorizontalLine;
-                }
-                for (var j = 0; j < s.points.length; j++) {
-                    var p = s.points[j];
-                    var newPoint = new Point({
-                        name: p.name,
-                        parentName: s.name,
-                        left: p.left,
-                        top: p.top,
-                        index: p.index
-                        // lockMovementX:(RawData.shapes[i].type === types.HLine)? false:true,
-                        // lockMovementY:(RawData.shapes[i].type === types.VLine)? false: true
-                    });
-                    if (s.type === types.HLine) {
-                        newPoint.lockMovementX = false;
-                        newPoint.lockMovementY = true;
-                    } else if (s.type === types.VLine) {
-                        newPoint.lockMovementX = true;
-                        newPoint.lockMovementY = false;
-                    } else if (s.type === types.Line || s.type === types.Rect) {
-                        newPoint.lockMovementX = false;
-                        newPoint.lockMovementY = false;
-                    }
-                    if (RawData.extColumns) {
-                        for (var z = 0; z < RawData.extColumns.length; z++) {
-                            var column = RawData.extColumns[z];
-                            newShape[column.name] = s[column.name];
+                mother.canvas.add(img);
+                mother.canvas.sendToBack(img);
+
+                if (img.height > 0 && img.width > 0) {
+                    globalImageHeight = img.height;
+                    bgr.height = img.height;
+                    globalImageWidth = img.width;
+                    bgr.width = img.width;
+                    for (var i = 0; i < RawData.shapes.length; i++) {
+                        var s = RawData.shapes[i];
+                        var newShape = new Shape({
+                            name: s.name,
+                            type: s.type,
+                            canvas: mother.canvas
+                        });
+                        if (!mother.randomColor) {
+                            if (newShape.type == types.Rect) newShape.color = colors.Rect;
+                            if (newShape.type == types.Line) newShape.color = colors.Line;
+                            if (newShape.type == types.VLine) newShape.color = colors.VerticalLine;
+                            if (newShape.type == types.HLine) newShape.color = colors.HorizontalLine;
                         }
+                        for (var j = 0; j < s.points.length; j++) {
+                            var p = s.points[j];
+                            var newPoint = new Point({
+                                name: p.name,
+                                parentName: s.name,
+                                left: GetValueFromPercent(p.left, img.width),
+                                top: GetValueFromPercent(p.top, img.height),
+                                index: p.index
+                                // lockMovementX:(RawData.shapes[i].type === types.HLine)? false:true,
+                                // lockMovementY:(RawData.shapes[i].type === types.VLine)? false: true
+                            });
+                            if (s.type === types.HLine) {
+                                newPoint.lockMovementX = false;
+                                newPoint.lockMovementY = true;
+                            } else if (s.type === types.VLine) {
+                                newPoint.lockMovementX = true;
+                                newPoint.lockMovementY = false;
+                            } else if (s.type === types.Line || s.type === types.Rect) {
+                                newPoint.lockMovementX = false;
+                                newPoint.lockMovementY = false;
+                            }
+                            if (RawData.extColumns) {
+                                for (var z = 0; z < RawData.extColumns.length; z++) {
+                                    var column = RawData.extColumns[z];
+                                    newShape[column.name] = s[column.name];
+                                }
+                            }
+                            newShape.points.push(newPoint);
+                        }
+                        newShape.lbX = s.lbX;
+                        newShape.lbY = s.lbY;
+                        mother.shapes.push(newShape);
                     }
-                    newShape.points.push(newPoint);
+                    mother.canvas.renderAll();
+                    mother.background = bgr;
+
+                    mother.initEvent();
+                    mother.loadDataToTable();
+                    mother.shapes.forEach(function (shape) {
+                        shape.Draw();
+                    })
                 }
-                newShape.lbX = s.lbX;
-                newShape.lbY = s.lbY;
-                this.LoadBackground(this.backgroundUrl);
-                this.shapes.push(newShape);
-            }
+            });
+
         } else {
             this.htmlRender();
+            if (!this.canvas) {
+                this.canvas = new fabric.Canvas(this.id + '-canvas', {
+                    selection: false,
+                    controlsAboveOverlay: false
+                });
+                this.LoadBackground(this.backgroundUrl);
+                fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
+                fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
+                this.initEvent();
+                this.loadDataToTable();
+            }
         }
-        if (!this.canvas) {
-            this.canvas = new fabric.Canvas(this.id + '-canvas', {
-                selection: false,
-                controlsAboveOverlay: false
-            });
-            this.LoadBackground(this.backgroundUrl);
-            fabric.Circle.prototype.originX = fabric.Circle.prototype.originY = 'center';
-            fabric.Line.prototype.originX = fabric.Line.prototype.originY = 'center';
-        }
-        this.initEvent();
-        this.loadDataToTable();
-        
-        this.shapes.forEach(function(shape){
-            shape.Draw();
-        })
+
         return vcanvas;
     };
     vcanvas.prototype.on = function (event, callback) {
@@ -291,7 +311,8 @@ var vcanvas = /** @class */ (function () {
                     $('#' + mother.bgModalId).modal('hide');
                     $('#' + mother.modalErrorId).text("");
                     mother.LoadBackground({
-                        url: url
+                        url: url,
+                        reloadAll: true
                     });
                     mother.Reset();
                 } else {
@@ -368,7 +389,7 @@ var vcanvas = /** @class */ (function () {
             });
             $('#' + mother.btnExportId).click(function () {
                 var js = mother.ToJson();
-                //console.log(js);
+                console.log(js);
                 $('#' + mother.txtDataId).val(js);
             });
             $('#' + mother.btnResetZoomId).click(function () {
@@ -656,7 +677,6 @@ var vcanvas = /** @class */ (function () {
                         if (p.parentName == mother.shapes[i].name) {
                             mother.ActiveObject = mother.shapes[i];
                             mother.ActiveObject.isMoving = true;
-                            var img = mother.getItem('background', null);
                             mother.shapes[i].Move({
                                 offsetX: e.e.movementX * globalStrokeWidth,
                                 offsetY: e.e.movementY * globalStrokeWidth,
@@ -785,6 +805,7 @@ var vcanvas = /** @class */ (function () {
                             </div>
                         </div>
                     </div>
+                    <img id="${this.imgId}" hidden="">
                 `;
 
         var mother = this;
@@ -1254,7 +1275,7 @@ var vcanvas = /** @class */ (function () {
                     index: point.index,
                     name: point.name,
                     left: parseFloat((point.left / image.width) * 100).toFixed(2),
-                    top: parseFloat((point.top / image.width) * 100).toFixed(2)
+                    top: parseFloat((point.top / image.height) * 100).toFixed(2)
                 });
             });
             ExportObject.shapes.push(ShapeExportObj);
@@ -1376,20 +1397,23 @@ var vcanvas = /** @class */ (function () {
     };
     vcanvas.prototype.LoadBackground = function (params) {
         var properties = $.extend({
-            url: this.backgroundUrl
+            url: this.backgroundUrl,
+            reloadAll: false
         }, params);
+        var reloadAll = properties.reloadAll;
         var bgr = new Background();
-        var c = this.canvas;
+        var mother = this;
         this.backgroundUrl = properties.url;
         bgr.url = this.backgroundUrl;
-        var bgImg = c.getItem('background', null);
+        var bgImg = this.canvas.getItem('background', null);
         var oldImgWidth = null;
         var oldImgHeight = null;
         if (bgImg) {
             oldImgWidth = bgImg.width;
             oldImgHeight = bgImg.height;
-            this.canvas.remove(bgImg);
+            mother.canvas.remove(bgImg);
         }
+
         fabric.Image.fromURL(properties.url, function (img) {
             img.selectable = false;
             img.set({
@@ -1397,20 +1421,40 @@ var vcanvas = /** @class */ (function () {
                 left: 0,
                 top: 0
             });
-            globalImageHeight = bgr.height = img.height;
-            globalImageWidth = bgr.width = img.width;
-            c.add(img);
-            c.sendToBack(img)
+            mother.canvas.add(img);
+            mother.canvas.sendToBack(img)
+            if (img.height > 0 && img.width > 0) {
+                globalImageHeight = img.height;
+                bgr.height = img.height;
+                globalImageWidth = img.width;
+                bgr.width = img.width;
+                if (reloadAll) {
+                    if (globalImageHeight > 0 && globalImageWidth > 0) {
+                        //console.log(globalImageHeight, globalImageWidth);
+                        mother.shapes.forEach(function (shape) {
+                            shape.points.forEach(function (point) {
+                                var leftInPercent = (point.left / oldImgWidth) * 100;
+                                var topInPercent = (point.top / oldImgHeight) * 100;
+                                point.left = (leftInPercent * bgr.width) / 100;
+                                point.top = (topInPercent * bgr.height) / 100;
+                            })
+                            shape.lbX = null;
+                            shape.lbY = null;
+                            shape.Remove();
+                            shape.Draw();
+                        })
+                    }
+                }
 
+                this.background = bgr;
+            }
             // if(img.height)
             //     c.setDimensions({height: img.height, width:img.width});
             // c.setZoom(0.51);
             //c.setBackgroundImage(img, c.renderAll.bind(c));
-            c.renderAll();
+            mother.canvas.renderAll();
         });
 
-
-        this.background = bgr;
     };
     vcanvas.prototype.Remove = function (object) {
         var o = this.Get(object);
@@ -1575,8 +1619,8 @@ var Shape = /** @class */ (function () {
             index: 0,
             name: "P-1",
             parentName: this.name,
-            left: 10, //175
-            top: 10, //175
+            left: GetValueFromPercent(10, globalImageWidth), //175
+            top: GetValueFromPercent(10, globalImageHeight), //175
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1585,8 +1629,8 @@ var Shape = /** @class */ (function () {
             index: 1,
             name: "P-2",
             parentName: this.name,
-            left: 40, //350
-            top: 10, //175
+            left: GetValueFromPercent(15, globalImageWidth), //350
+            top: GetValueFromPercent(10, globalImageHeight), //175
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1595,8 +1639,8 @@ var Shape = /** @class */ (function () {
             index: 2,
             name: "P-3",
             parentName: this.name,
-            left: 40, //350
-            top: 35, //300
+            left: GetValueFromPercent(15, globalImageWidth), //350
+            top: GetValueFromPercent(20, globalImageHeight), //300
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1605,8 +1649,8 @@ var Shape = /** @class */ (function () {
             index: 3,
             name: "P-4",
             parentName: this.name,
-            left: 10,
-            top: 35,
+            left: GetValueFromPercent(10, globalImageWidth),
+            top: GetValueFromPercent(20, globalImageHeight),
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1620,8 +1664,8 @@ var Shape = /** @class */ (function () {
                     index: 0,
                     name: "P-1",
                     parentName: this.name,
-                    left: GetValueFromPercent(10),
-                    top: 10,
+                    left: GetValueFromPercent(10, globalImageWidth),
+                    top: GetValueFromPercent(10, globalImageHeight),
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
@@ -1631,8 +1675,8 @@ var Shape = /** @class */ (function () {
                     index: 1,
                     name: "P-2",
                     parentName: this.name,
-                    left: GetValueFromPercent(10),
-                    top: GetValueFromPercent(35),
+                    left: GetValueFromPercent(10, globalImageWidth),
+                    top: GetValueFromPercent(35, globalImageHeight),
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
@@ -1647,8 +1691,8 @@ var Shape = /** @class */ (function () {
                 index: 0,
                 name: "P-1",
                 parentName: this.name,
-                left: GetValueFromPercent(10),
-                top: GetValueFromPercent(10),
+                left: GetValueFromPercent(10, globalImageWidth),
+                top: GetValueFromPercent(10, globalImageHeight),
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
@@ -1658,8 +1702,8 @@ var Shape = /** @class */ (function () {
                 index: 1,
                 name: "P-2",
                 parentName: this.name,
-                left: GetValueFromPercent(35),
-                top: GetValueFromPercent(10),
+                left: GetValueFromPercent(35, globalImageWidth),
+                top: GetValueFromPercent(10, globalImageHeight),
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
@@ -1676,8 +1720,11 @@ var Shape = /** @class */ (function () {
         var strokeWidth = options.strokeWidth;
         var dlines = {};
         if (this.type == types.Line) {
-            var line = new fabric.Line([GetValueFromPercent(this.points[0].left, globalImageWidth), GetValueFromPercent(this.points[0].top, globalImageHeight),
-                GetValueFromPercent(this.points[1].left, globalImageWidth), GetValueFromPercent(this.points[1].top, globalImageHeight)
+            var line = new fabric.Line([
+                this.points[0].left,
+                this.points[0].top,
+                this.points[1].left,
+                this.points[1].top
             ], {
                 name: this.name,
                 parentName: this.name,
@@ -1697,8 +1744,11 @@ var Shape = /** @class */ (function () {
             dlines[line.name] = line;
             this.canvas.add(line);
         } else if (this.type == types.VLine || this.type == types.HLine) {
-            var line = new fabric.Line([GetValueFromPercent(this.points[0].left, globalImageWidth), GetValueFromPercent(this.points[0].top, globalImageHeight),
-                GetValueFromPercent(this.points[1].left, globalImageWidth), GetValueFromPercent(this.points[1].top, globalImageHeight)
+            var line = new fabric.Line([
+                this.points[0].left,
+                this.points[0].top,
+                this.points[1].left,
+                this.points[1].top
             ], {
                 name: this.name,
                 parentName: this.name,
@@ -1717,14 +1767,14 @@ var Shape = /** @class */ (function () {
             dlines[line.name] = line;
             this.canvas.add(line);
         } else {
-            this.x = (this.points[0].left + this.points[2].left) / 2;
-            this.y = (this.points[0].top + this.points[2].top) / 2;
             for (var i = 0; i < this.points.length; i++) {
                 var line;
                 if (i !== (this.points.length - 1)) {
-                    line = new fabric.Line([GetValueFromPercent(this.points[i].left, globalImageWidth),
-                        GetValueFromPercent(this.points[i].top, globalImageHeight),
-                        GetValueFromPercent(this.points[i + 1].left, globalImageWidth), GetValueFromPercent(this.points[i + 1].top, globalImageHeight)
+                    line = new fabric.Line([
+                        this.points[i].left,
+                        this.points[i].top,
+                        this.points[i + 1].left,
+                        this.points[i + 1].top
                     ], {
                         name: "line" + i,
                         parentName: this.name,
@@ -1738,8 +1788,8 @@ var Shape = /** @class */ (function () {
                         perPixelTargetFind: true
                     });
                 } else {
-                    line = new fabric.Line([GetValueFromPercent(this.points[i].left, globalImageWidth), GetValueFromPercent(this.points[i].top, globalImageHeight),
-                        GetValueFromPercent(this.points[0].left, globalImageWidth), GetValueFromPercent(this.points[0].top, globalImageHeight)
+                    line = new fabric.Line([this.points[i].left, this.points[i].top,
+                        this.points[0].left, this.points[0].top
                     ], {
                         name: "line" + i,
                         parentName: this.name,
@@ -1807,6 +1857,9 @@ var Shape = /** @class */ (function () {
         }, params);
         var offsetX = properties.offsetX;
         var offsetY = properties.offsetY;
+        if (offsetX < 0 || offsetY < 0) {
+            var test = 1;
+        }
         var point = properties.point;
         var scaleFactor = properties.scaleFactor;
         var strokeWidth = properties.strokeWidth;
@@ -1839,7 +1892,7 @@ var Shape = /** @class */ (function () {
         path.set({
             name: 'i-' + this.name,
             parentName: this.name,
-            opacity: 0.005,
+            opacity: 0.5,
             hasControls: false,
             hasBorders: false,
             hasRotatingPoint: false
@@ -2218,9 +2271,9 @@ function getKeyByValue(object, value) {
 }
 
 function GetPercent(value, total) {
-    return parseFloat((value / total) * 100).toFixed(2);
+    return parseFloat((value / total) * 100);
 }
 
-function GetValueFromPercent(value, total){
-    return parseFloat((value * total) / 100).toFixed(2);
+function GetValueFromPercent(value, total) {
+    return parseFloat((value * total) / 100);
 }

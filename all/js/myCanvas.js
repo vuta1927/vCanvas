@@ -18,10 +18,10 @@ globalImageWidth = 1;
 globalImageHeight = 1;
 replaceValues = [];
 colors = {
-    Rect: 'green',
-    Line: 'pink',
-    VerticalLine: 'blue',
-    HorizontalLine: 'yellow'
+    Rect: '#ff00ff',
+    Line: '#00ff00',
+    VerticalLine: '#0066ff',
+    HorizontalLine: '#ffff00'
 };
 (function () {
     function Create(params) {
@@ -73,11 +73,13 @@ var extColumn = (function () {
         var properties = $.extend({
             name: null,
             type: typeColumns.Text,
-            data: null
+            data: null,
+            width: 30
         }, params);
         this.name = properties.name;
         this.type = properties.type;
         this.data = properties.data;
+        this.width = properties.width;
     }
     return extColumn;
 }());
@@ -163,6 +165,7 @@ var vcanvas = /** @class */ (function () {
         this.txtDataColumnId = this.id + '-txtDataColumn';
         this.divDataColumnsId = this.id + '-divDataColumns';
         this.imgId = this.id + '-img';
+        this.txtWidthColumn = this.id + '-widthColumn';
     }
     vcanvas.prototype.initCss = function () {
         var style = document.createElement('style');
@@ -566,7 +569,8 @@ var vcanvas = /** @class */ (function () {
                         index: result.index,
                         type: types.Line,
                         points: [A, B],
-                        canvas: c
+                        canvas: c,
+                        color: colors.Line
                     });
                     line.Draw({
                         scaleFactor: globalScaleValue,
@@ -755,11 +759,12 @@ var vcanvas = /** @class */ (function () {
                         <button type="button" class="btn btn-sm btn-success" id="${this.btnExportId}"><i class="fa fa-cloud-download"></i> Export to JSON</button>
                         <button type="button" class="btn btn-sm btn-default" id="${this.btnNewColumnId}" data-toggle="modal" data-target="#${this.AddColumnModalId}"><i class="fa fa-plus"></i> Add column</button>
                         </div>
-                        <div class="col-sm-12 canvas-div">
+                        <div class="col-sm-12 canvas-div" style="overflow: auto">
                             <div id="${this.tableWrapperId}" class="table-editable">
                             <table id="${this.tableId}" class="tblShape table table-hover table-sm text-center">
                                 <thead>
                                     <tr>
+                                        <th></th>
                                         <th>#</th>
                                         <th>Name</th>
                                         <th>Type</th>
@@ -767,7 +772,6 @@ var vcanvas = /** @class */ (function () {
                                             ${c.name ? `<th>${c.name}</th>` : ``}
                                         `)}
                                         <th id="0"></th>
-                                        <th></th>
                                     </tr>
                                 </thead><tbody></tbody></table>
                             </div>
@@ -786,9 +790,13 @@ var vcanvas = /** @class */ (function () {
                                             <label for="${this.txtNameColumnId}">Name</label>
                                             <input id="${this.txtNameColumnId}" class="canvas-input form-control form-control-sm" placeholder="">
                                         </div>
-                                        <div class="col-sm-4">
+                                        <div class="col-sm-3">
                                             <label for="${this.AddColumnmodalErrorId}">Type</label>
                                             <select id="${this.selectTypeColumnId}" class="form-control form-control-sm"></select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="${this.txtWidthColumn}">width</label>
+                                            <input id="${this.txtWidthColumn}" class="canvas-input form-control form-control-sm" placeholder="">
                                         </div>
                                         <br>
                                         <div id="${this.divDataColumnsId}" class="col-sm-12">
@@ -805,12 +813,14 @@ var vcanvas = /** @class */ (function () {
                             </div>
                         </div>
                     </div>
-                    <img id="${this.imgId}" hidden="">
                 `;
 
         var mother = this;
-        $(`#${this.txtNameColumnId}`).keypress(function () {
-            return mother.ValidateKey()
+        $('#'+ this.txtNameColumnId).keypress(function () {
+            return mother.ValidateKey();
+        });
+        $('#'+this.txtWidthColumn).keypress(function () {
+            return mother.ValidateNumber();
         });
         $(`#${this.selectTypeColumnId}`).change(function () {
             var element = $(`#${mother.divDataColumnsId}`);
@@ -846,6 +856,7 @@ var vcanvas = /** @class */ (function () {
                 }
                 var type = $(`#${mother.selectTypeColumnId}`).val();
                 var data = $(`#${mother.txtDataColumnId}`).val().split(';');
+                var width = $(`#${mother.txtWidthColumn}`).val();
                 if (type == typeColumns.Combobox) {
                     if (!data || data.length <= 0 || data[0] == '') {
                         $('#' + mother.AddColumnmodalErrorId).text("Please enter items for combobox, each item seperate by a ';' character.");
@@ -857,7 +868,9 @@ var vcanvas = /** @class */ (function () {
                 var newColumn = new extColumn({
                     name: name,
                     type: type,
-                    data: data
+                    data: data,
+                    width: width
+
                 });
                 var context;
                 myTable.find('th').each(function (i, element) {
@@ -869,22 +882,22 @@ var vcanvas = /** @class */ (function () {
                 myTable.find('td').each(function (i, element) {
                     //console.log(element.id);
                     if (element.id == '0') {
-                        var shapeName = element.parentElement.cells[1].children[0].value;
+                        var shapeName = element.parentElement.cells[2].children[0].value;
                         if (newColumn.type == typeColumns.Text)
-                            context = `<input id="${mother.id + '-' + shapeName + '-input-' + newColumn.name}" class="canvas-input" type="text" size="4" style="border:none"/>`;
+                            context = `<input id="${mother.id + '-' + shapeName + '-input-' + newColumn.name}" class="canvas-input" type="text" style="border:none;width:${width?width+'px':'50px'}"/>`;
                         if (newColumn.type == typeColumns.Number) {
-                            context = `<input id="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" name="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" class="canvas-input ui-spinner-input" style="border:none"/>`;
+                            context = `<input id="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" name="${mother.id + '-' + shapeName + '-number-' + newColumn.name}" class="canvas-input ui-spinner-input" style="border:none;width:${width?width+'px':'50px'}"/>`;
                             $(`#${mother.id + '-' + shapeName + '-number-' + newColumn.name}`).click(function () {
-                                alert('clicked');
+                                //alert('clicked');
                             });
                         }
                         if (newColumn.type == typeColumns.Combobox) {
-                            context = `<select id="${mother.id + '-' + shapeName + '-select-' + newColumn.name}" style="border:none">${data.map(d=>`
+                            context = `<select id="${mother.id + '-' + shapeName + '-select-' + newColumn.name}" style="border:none;width:${width?width+'px':'50px'}">${data.map(d=>`
                         ${d?`<option value="${d}">${d}</option>`:``}
                         `)}</select>`;
                         }
                         if (newColumn.type == typeColumns.Checkbox)
-                            context = `<input class="canvas-input" id="${mother.id + '-' + shapeName + '-checkbox-' + newColumn.name}"  type="checkbox"/>`;
+                            context = `<input class="canvas-input" id="${mother.id + '-' + shapeName + '-checkbox-' + newColumn.name}"  type="checkbox" style="width:${width?width+'px':'50px'}"/>`;
                         $(element).before(`<td>${context}</td>`);
                     }
                 });
@@ -893,6 +906,11 @@ var vcanvas = /** @class */ (function () {
                     mother.extColumns.forEach(function (c) {
                         $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function () {
                             s[c.name] = this.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
                             mother.triggerHandler('CanvasModified', {
                                 event: c.name + " change",
                                 source: mother
@@ -900,7 +918,12 @@ var vcanvas = /** @class */ (function () {
                         });
                         $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
                             // var element = this;
-                            s[c.name] = this.value //spinner.spinner(mother.id + '-' + s.name + '-number-' + c.name);
+                            s[c.name] = this.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
                             mother.triggerHandler('CanvasModified', {
                                 event: c.name + " change",
                                 source: mother
@@ -908,6 +931,11 @@ var vcanvas = /** @class */ (function () {
                         });
                         $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
                             s[c.name] = this.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
                             mother.triggerHandler('CanvasModified', {
                                 event: c.name + " change",
                                 source: mother
@@ -915,6 +943,11 @@ var vcanvas = /** @class */ (function () {
                         });
                         $(`#${mother.id + '-' + s.name + '-checkbox-' + c.name}`).change(function () {
                             s[c.name] = this.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
                             mother.triggerHandler('CanvasModified', {
                                 event: c.name + " change",
                                 source: mother
@@ -923,11 +956,21 @@ var vcanvas = /** @class */ (function () {
                         mother.extColumns.forEach(function (c) {
                             $('#' + mother.id + '-' + s.name + '-number-' + c.name).spinner({
                                 spin: function (event, ui) {
+                                    s.Remove();
+                                    s.Draw({
+                                        scaleFactor: globalScaleValue,
+                                        strokeWidth: globalStrokeWidth
+                                    });
                                     s[c.name] = ui.value;
                                 },
                                 change: function (event, ui) {
                                     var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
                                     s[c.name] = element.value;
+                                    s.Remove();
+                                    s.Draw({
+                                        scaleFactor: globalScaleValue,
+                                        strokeWidth: globalStrokeWidth
+                                    });
                                     mother.triggerHandler('CanvasModified', {
                                         event: c.name + " change",
                                         source: mother
@@ -984,40 +1027,41 @@ var vcanvas = /** @class */ (function () {
         var stt = 0;
         context = `${mother.shapes.map(s =>
             `<tr>
+                <td>
+                    <span id="${mother.id + '-' + s.name + '-spanRemoveShape-' + s.name}" class="table-remove fa fa-trash-o"></span>
+                </td>
                 <td class="text-center"  data-toggle="collapse" data-target="#${mother.id + '-'+s.name+'tr-pointDetail'}">
                     ${++stt}
                 </td>
                 <td class="text-center">
-                    <input id="${mother.id + '-' + s.name + '-input-' + s.name}"  type="text" size="5" style="border:none" value="${s.name}" />
+                    <input id="${mother.id + '-' + s.name + '-input-' + s.name}" type="text" style="border:none; width:100%;padding:0px;margin:0px" value="${s.name}" />
                 </td>
                 <td>
                     ${getKeyByValue(types, s.type)}
                 </td>
                 ${this.extColumns.map(c => `
                     ${(c.type == typeColumns.Text) ? `
-                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-input-' + c.name}"  type="text" size="4" style="border:none" value="${s[c.name]?s[c.name]:``}" />
+                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-input-' + c.name}"  type="text" style="border:none; width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px" value="${s[c.name]?s[c.name]:``}" />
                     </td>`: ``}
                     ${(c.type == typeColumns.Number) ? `
-                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-number-' + c.name}" name="value" size="4" style="border:none" value="${s[c.name]?s[c.name]:``}" />
+                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-number-' + c.name}" name="value" style="border:none; width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px" value="${s[c.name]?s[c.name]:``}" />
                     </td>`: ``}
                     ${(c.type == typeColumns.Combobox) ? `
                     <td class="text-center">
-                        <select id="${mother.id + '-' + s.name + '-select-' + c.name}" style="border:none">
+                        <select id="${mother.id + '-' + s.name + '-select-' + c.name}" style="border:none; width:${c.width?c.width+'px':'50px'}">
                         ${c.data? c.data.map(d=>`<option ${d==s[c.name]? `selected="selected"`:``} value="${d}">${d}</option>
                         `):``}
                         </select>
                     </td>`: ``}
                     ${(c.type == typeColumns.Checkbox) ? `
-                    <td><input id="${mother.id + '-' + s.name + '-checkbox-' + c.name}"  type="checkbox"/>
+                    <td><input id="${mother.id + '-' + s.name + '-checkbox-' + c.name}"  type="checkbox" style="width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px"/>
                     </td>`: ``}
                 `)}
                 <td id="0" data-col="0" class="text-center">
                     ${(s.type == types.Rect) ? (s.AddPointMode ? `
                     <label class="switch"><input type="checkbox" id="${mother.id + '-' + s.name + '-switch-' + s.name}" checked title="Click on picture where you want to add point!"><span class="slider round"></span></label>` : `
                     <label class="switch"><input type="checkbox" id="${mother.id + '-' + s.name + '-switch-' + s.name}"><span class="slider round"></span></label>`):``}</td>
-                <td>
-                    <span id="${mother.id + '-' + s.name + '-spanRemoveShape-' + s.name}" class="table-remove fa fa-trash-o"></span>
-                </td>
+                
             </tr>
             <tr>
                 <td colspan="10" class="hiddenRow">
@@ -1031,12 +1075,15 @@ var vcanvas = /** @class */ (function () {
                 `<tr id="${mother.id + '-' + s.name + '-tr-' + p.name}" class="text-center">
                     <td  hidden="true">${s.name}</td>
                     <td>${p.name}</td>
-                    <td>${(mother.background.width) ? parseFloat((p.left / mother.background.width) * 100).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
-                    <td>${(mother.background.height) ? parseFloat((p.top / mother.background.height) * 100).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
+                    <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
+                    <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
                     ${s.type == types.Rect ? `
                     <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
                 </tr>`
             ).join('')}</tbody></table>
+            <div id="${mother.id+ '-' + s.name}-dialog-confirm" title="Delete selected shape?">
+                        <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>This shape will be permanently deleted and cannot be recovered. Are you sure?</p>
+                    </div>
             </div></td></tr>
             `)}`;
         $('.accordian-body').on('show.bs.collapse', function () {
@@ -1063,7 +1110,29 @@ var vcanvas = /** @class */ (function () {
                 mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name);
             });
             $('#' + mother.id + '-' + s.name + '-spanRemoveShape-' + s.name).click(function () {
-                mother.onRemoveShapeClicked(s);
+                $(`#${mother.id+ '-' + s.name}-dialog-confirm`).dialog({
+                    resizable: false,
+                    height: "auto",
+                    width: 400,
+                    modal: true,
+                    show: {
+                        effect: "fade",
+                        duration: 300
+                    },
+                    hide: {
+                        effect: "fade",
+                        duration: 200
+                    },
+                    buttons: {
+                        "Delete": function () {
+                            mother.onRemoveShapeClicked(s);
+                            $(this).dialog("close");
+                        },
+                        Cancel: function () {
+                            $(this).dialog("close");
+                        }
+                    }
+                });
             });
             s.points.forEach(function (p) {
                 $('#' + mother.id + '-' + s.name + '-tr-' + p.name).click(function () {
@@ -1079,6 +1148,11 @@ var vcanvas = /** @class */ (function () {
                         change: function () {
                             var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
                             s[c.name] = element.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
                             mother.triggerHandler('CanvasModified', {
                                 event: c.name + " change",
                                 source: mother
@@ -1093,6 +1167,11 @@ var vcanvas = /** @class */ (function () {
                     $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
                         var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
                         s[c.name] = element.value;
+                        s.Remove();
+                        s.Draw({
+                            scaleFactor: globalScaleValue,
+                            strokeWidth: globalStrokeWidth
+                        });
                         mother.triggerHandler('CanvasModified', {
                             event: c.name + " change",
                             source: mother
@@ -1106,10 +1185,20 @@ var vcanvas = /** @class */ (function () {
                     if (c.type == typeColumns.Combobox) {
                         var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
                         s[c.name] = element.value;
+                        s.Remove();
+                        s.Draw({
+                            scaleFactor: globalScaleValue,
+                            strokeWidth: globalStrokeWidth
+                        });
                     }
                     $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
                         var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
                         s[c.name] = element.value;
+                        s.Remove();
+                        s.Draw({
+                            scaleFactor: globalScaleValue,
+                            strokeWidth: globalStrokeWidth
+                        });
                         mother.triggerHandler('CanvasModified', {
                             event: c.name + " change",
                             source: mother
@@ -1118,6 +1207,11 @@ var vcanvas = /** @class */ (function () {
                     $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function () {
                         var element = document.getElementById(mother.id + '-' + s.name + '-input-' + c.name);
                         s[c.name] = element.value;
+                        s.Remove();
+                        s.Draw({
+                            scaleFactor: globalScaleValue,
+                            strokeWidth: globalStrokeWidth
+                        });
                         mother.triggerHandler('CanvasModified', {
                             event: c.name + " change",
                             source: mother
@@ -1243,6 +1337,11 @@ var vcanvas = /** @class */ (function () {
         var allowed = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-.0123456789';
         return allowed.indexOf(String.fromCharCode(key)) != -1;
     }
+    vcanvas.prototype.ValidateNumber = function () {
+        var key = window.event.keyCode;
+        var allowed = '0123456789';
+        return allowed.indexOf(String.fromCharCode(key)) != -1;
+    }
     vcanvas.prototype.replacer = function (key, value) {
         // console.log(key, value);
         if (replaceValues.indexOf(value) > -1 || replaceValues.indexOf(key) > -1)
@@ -1274,8 +1373,8 @@ var vcanvas = /** @class */ (function () {
                 ShapeExportObj.points.push({
                     index: point.index,
                     name: point.name,
-                    left: parseFloat((point.left / image.width) * 100).toFixed(2),
-                    top: parseFloat((point.top / image.height) * 100).toFixed(2)
+                    left: parseFloat(point.left / image.width).toFixed(2),
+                    top: parseFloat(point.top / image.height).toFixed(2)
                 });
             });
             ExportObject.shapes.push(ShapeExportObj);
@@ -1433,10 +1532,10 @@ var vcanvas = /** @class */ (function () {
                         //console.log(globalImageHeight, globalImageWidth);
                         mother.shapes.forEach(function (shape) {
                             shape.points.forEach(function (point) {
-                                var leftInPercent = (point.left / oldImgWidth) * 100;
-                                var topInPercent = (point.top / oldImgHeight) * 100;
-                                point.left = (leftInPercent * bgr.width) / 100;
-                                point.top = (topInPercent * bgr.height) / 100;
+                                var leftInPercent = (point.left / oldImgWidth); //* 100;
+                                var topInPercent = (point.top / oldImgHeight); //* 100;
+                                point.left = (leftInPercent * bgr.width); /// 100;
+                                point.top = (topInPercent * bgr.height); // 100;
                             })
                             shape.lbX = null;
                             shape.lbY = null;
@@ -1619,8 +1718,8 @@ var Shape = /** @class */ (function () {
             index: 0,
             name: "P-1",
             parentName: this.name,
-            left: GetValueFromPercent(10, globalImageWidth), //175
-            top: GetValueFromPercent(10, globalImageHeight), //175
+            left: GetValueFromPercent(0.1, globalImageWidth), //175
+            top: GetValueFromPercent(0.1, globalImageHeight), //175
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1629,8 +1728,8 @@ var Shape = /** @class */ (function () {
             index: 1,
             name: "P-2",
             parentName: this.name,
-            left: GetValueFromPercent(15, globalImageWidth), //350
-            top: GetValueFromPercent(10, globalImageHeight), //175
+            left: GetValueFromPercent(0.15, globalImageWidth), //350
+            top: GetValueFromPercent(0.10, globalImageHeight), //175
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1639,8 +1738,8 @@ var Shape = /** @class */ (function () {
             index: 2,
             name: "P-3",
             parentName: this.name,
-            left: GetValueFromPercent(15, globalImageWidth), //350
-            top: GetValueFromPercent(20, globalImageHeight), //300
+            left: GetValueFromPercent(0.15, globalImageWidth), //350
+            top: GetValueFromPercent(0.20, globalImageHeight), //300
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1649,8 +1748,8 @@ var Shape = /** @class */ (function () {
             index: 3,
             name: "P-4",
             parentName: this.name,
-            left: GetValueFromPercent(10, globalImageWidth),
-            top: GetValueFromPercent(20, globalImageHeight),
+            left: GetValueFromPercent(0.10, globalImageWidth),
+            top: GetValueFromPercent(0.20, globalImageHeight),
             fill: this.color,
             stroke: this.color,
             canvas: this.canvas
@@ -1664,8 +1763,8 @@ var Shape = /** @class */ (function () {
                     index: 0,
                     name: "P-1",
                     parentName: this.name,
-                    left: GetValueFromPercent(10, globalImageWidth),
-                    top: GetValueFromPercent(10, globalImageHeight),
+                    left: GetValueFromPercent(0.10, globalImageWidth),
+                    top: GetValueFromPercent(0.10, globalImageHeight),
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
@@ -1675,8 +1774,8 @@ var Shape = /** @class */ (function () {
                     index: 1,
                     name: "P-2",
                     parentName: this.name,
-                    left: GetValueFromPercent(10, globalImageWidth),
-                    top: GetValueFromPercent(35, globalImageHeight),
+                    left: GetValueFromPercent(0.10, globalImageWidth),
+                    top: GetValueFromPercent(0.35, globalImageHeight),
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
@@ -1691,8 +1790,8 @@ var Shape = /** @class */ (function () {
                 index: 0,
                 name: "P-1",
                 parentName: this.name,
-                left: GetValueFromPercent(10, globalImageWidth),
-                top: GetValueFromPercent(10, globalImageHeight),
+                left: GetValueFromPercent(0.10, globalImageWidth),
+                top: GetValueFromPercent(0.10, globalImageHeight),
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
@@ -1702,8 +1801,8 @@ var Shape = /** @class */ (function () {
                 index: 1,
                 name: "P-2",
                 parentName: this.name,
-                left: GetValueFromPercent(35, globalImageWidth),
-                top: GetValueFromPercent(10, globalImageHeight),
+                left: GetValueFromPercent(0.35, globalImageWidth),
+                top: GetValueFromPercent(0.10, globalImageHeight),
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
@@ -1892,7 +1991,7 @@ var Shape = /** @class */ (function () {
         path.set({
             name: 'i-' + this.name,
             parentName: this.name,
-            opacity: 0.5,
+            opacity: 0.01,
             hasControls: false,
             hasBorders: false,
             hasRotatingPoint: false
@@ -2271,9 +2370,9 @@ function getKeyByValue(object, value) {
 }
 
 function GetPercent(value, total) {
-    return parseFloat((value / total) * 100);
+    return parseFloat(value / total);
 }
 
 function GetValueFromPercent(value, total) {
-    return parseFloat((value * total) / 100);
+    return parseFloat(value * total);
 }

@@ -1033,7 +1033,7 @@ var vcanvas = /** @class */ (function () {
                     <span id="${mother.id + '-' + s.name + '-spanRemoveShape-' + s.name}" class="table-remove fa fa-trash-o"></span>
                 </td>
                 <td>
-                    ${(s.type == types.Rect)? `<span id="${mother.id + '-' + s.name + '-calibRect-' + s.name}" class="table-calibRect fa fa-crop"></span>`:``}
+                    ${(s.type == types.Rect && s.points.length <= 4)? `<span id="${mother.id + '-' + s.name + '-calibRect-' + s.name}" class="table-calibRect fa fa-crop"></span>`:``}
                 </td>
                 <td class="text-center"  data-toggle="collapse" data-target="#${mother.id + '-'+s.name+'tr-pointDetail'}">
                     ${++stt}
@@ -1086,10 +1086,9 @@ var vcanvas = /** @class */ (function () {
                     <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
                 </tr>`
             ).join('')}</tbody></table>
-            <div id="${mother.id+ '-' + s.name}-dialog-confirm" title="Delete selected shape?">
-                        <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>This shape will be permanently deleted and cannot be recovered. Are you sure?</p>
-                    </div>
-            </div></td></tr>
+            <div id="${mother.id+ '-' + s.name}-dialog-confirm" title="Are you sure to delete ${s.name} ?"></div>
+            </div>
+            </td></tr>
             `)}`;
         $('.accordian-body').on('show.bs.collapse', function () {
             $(this).closest("table")
@@ -2307,7 +2306,6 @@ var Shape = /** @class */ (function () {
             c: -f_bottom.a*P1.left - f_bottom.b*P1.top
         };
         var NewP2 = this.CaculateIntersection(f23, f12New);
-        console.log(NewP2.x, NewP2.y);
         P2.top = NewP2.y;
         P2.left = NewP2.x;
         // P2.left = vectoP3P4.y + P1.top;
@@ -2328,23 +2326,27 @@ var Shape = /** @class */ (function () {
             x:x0,y:y0
         }
     }
-    Shape.prototype.Extract = function (p1, p2) { //xay dung phuong trinh duong thang ax+by+c=0, tra ve a,b,c
+    Shape.prototype.Extract = function (p1, p2) { //xay dung phuong trinh duong thang ax+by+c=0
         //y = ax + b
-        var a = (p2.top - p1.top)/(p2.left - p1.left);
-        var c = p1.top - a*p2.left;
-        return{
-            a:a,
-            b:1,
-            c:c
-        }
-        // var a = p1.top - p2.top;
-        // var b = p1.left - p2.left;
-        // var c = -(a * p1.left + b * p1.top);
-        // return {
-        //     a: a,
-        //     b: b,
-        //     c: c
-        // };
+        // var a = (p2.top - p1.top)/(p2.left - p1.left);
+        // var c = p1.top - a*p2.left;
+        // return{
+        //     a:a,
+        //     b:1,
+        //     c:c
+        // }
+        var u = {
+            x:p2.left - p1.left,
+            y:p2.top - p1.top
+        };
+        var a = u.y;
+        var b = -u.x;
+        var c = -(a * p1.left + b * p1.top);
+        return {
+            a: a,
+            b: b,
+            c: c
+        };
     };
     Shape.prototype.GetNewCoodr = function (a, b) { //tinh lai toa do khi di chuyen
         for (var i = 0; i < this.points.length; ++i) {

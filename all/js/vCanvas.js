@@ -1,147 +1,128 @@
-import { fabric } from "./fabric";
-import { open } from "inspector";
+var vCanvas = (function () {
+    var vCanvas = {}
+    vCanvas.types = {
+        Rect: 100,
+        Line: 200,
+        HLine: 201,
+        VLine: 202
+    };
+    vCanvas.columnTypes = {
+        Text: 100,
+        Number: 200,
+        Combobox: 300,
+        Checkbox: 400
+    };
+    vCanvas.colors = {
+        Rect: '#ff00ff',
+        Line: '#00ff00',
+        VerticalLine: '#0066ff',
+        HorizontalLine: '#ffff00'
+    };
+    vCanvas.canvasCollection = [];
 
-vCanvas.TYPES = {
-    Rect: 100,
-    Line: 200,
-    HLine: 201,
-    VLine: 202
-};
+    var CanvasControl = (function(){
+        CanvasControl = function(params){
+            var properties = $.extend({
+                //these are the defaults
+                id: null,
+                parent: null,
+                parentObject: null,
+                types: [],
+                backgroundUrl: null,
+                shapes: [],
+                isDrawing: false,
+                isMouseDown: false,
+                panning: false,
+                AddPointMode: false,
+                ActiveObject: null,
+                units: 70,
+                startX: 0,
+                startY: 0,
+                tempPoint: null,
+                LineHovered: null,
+                prevSelected: null,
+                js: null,
+                extColumns: [],
+                currentWidth: null,
+                currentHeight: null,
+                maxShape: null,
+                randomColor: null
+            }, params);
+            this.id = properties.id;
+            this.parent = properties.parent; //id, ex: <div id='containner'>
+            this.parentObject = properties.parentObject;
+            this.types = properties.types;
+            this.backgroundUrl = properties.backgroundUrl;
+            this.shapes = properties.shapes;
+            this.units = properties.units;
+            this.startX = properties.startX;
+            this.startY = properties.startY;
+            this.tempPoint = properties.tempPoint;
+            this.LineHovered = properties.LineHovered;
+            this.ActiveObject = properties.ActiveObject;
+            this.prevSelected = properties.prevSelected;
+            this.js = properties.js;
+            this.extColumns = properties.extColumns;
+            this.currentHeight = properties.currentHeight;
+            this.currentWidth = properties.currentWidth;
+            this.maxShape = properties.maxShape;
+            this.randomColor = properties.randomColor;
+        }
 
-vCanvas.COLTYPES = {
-    Text: 100,
-    Number: 200,
-    Combobox: 300,
-    Checkbox: 400
-};
-vCanvas.Collection = [];
+        vCanvas.Point = (function () {
+            var Point = {}
+            function Draw (){
+    
+            }
+            Point.Create = function (params) {
+                var options = $.extend({
+                    index: null,
+                    name: null,
+                    parentName: null,
+                    left: 0,
+                    top: 0,
+                    fill: null,
+                    stroke: null,
+                    lockMovementX: false,
+                    lockMovementY: false
+                }, params);
+                Point.index = options.index;
+                Point.name = options.name;
+                Point.parentName = options.parentName;
+                Point.left = options.left;
+                Point.top = options.top;
+                Point.fill = options.fill;
+                Point.stroke = options.stroke;
+                Point.lockMovementX = options.lockMovementX;
+                Point.lockMovementY = options.lockMovementY;
+                return Point;
+            }
+            Point.GetName = function () {
+                return Point.name;
+            }
+            return Point;
+        })()
+    })()
 
-var ExtendColumns = (function(){
-    function ExtendColumns(params){
+    vCanvas.Create = function(params){
+        var newControl = new CanvasControl();
         var options = $.extend({
-            name: null,
-            type: null,
-            data: null
-        }, params);
-        this.name = options.name;
-        this.type = options.type;
-        this.data = options.data;
-        return this;
-    }
-    return ExtendColumns;
-})()
-
-var vCanvas = (function(){
-    function Create(params){
-        var options = $.extend({
-            id: null,
             json: null,
             parent: null,
-            imageUrl: null,
+            backgroundUrl: null,
             types: [],
-            extendColumns: []
-        }, params);
-        var id = options.id;
-        var json = options.json;
-        var data = options.data;
-        var parent = options.parent;
-        var imageUrl = options.imageUrl;
-        var canvasTypes = options.types;
-        var extendColumns = options.extendColumns;
+            extColumns: [],
+            maxShape: null,
+            randomColor: false,
+        },params);
+        newControl.json = options.json;
+        newControl.parentId = options.parent;
+        newControl.backgroundUrl = options.backgroundUrl;
+        newControl.types = options.types;
+        newControl.extColumns = options.extColumns;
+        newControl.maxShape = options.maxShape;
+        newControl.randomColor = options.randomColor;
+        vCanvas.canvasCollection.push(newControl);
     }
+    return vCanvas;
 })()
-
-
-var Point = (function(){
-    var myConfig = {
-        radius: 3,
-        strokeWidth:1,
-        stroke: "black",
-        hoverCursor: "pointer",
-    }
-    function Point(params){
-        var options = $.extend({
-            index: null,
-            name: null,
-            color: null,
-            x: 0,
-            y: 0,
-        }, params);
-        this.index = options.index;
-        this.name = options.name;
-        this.color = options.color;
-        this.x = options.x;
-        this.y = options.y;
-    }
-    return point;
-})()
-
-var Shape = (function(){
-    var myConfig = {
-        radius: 3,
-        strokeWidth:1,
-        stroke: "black",
-        hoverCursor: "pointer",
-        color: null,
-        labelX: 0,
-        labelY: 0,
-        isMoving: false,
-        AddPointMode: false
-    }
-    function Shape(params){
-        var options = $.extend({
-            index: null,
-            name: null,
-            type: null,
-            points: []
-        }, params);
-        this.index = options.index;
-        this.name = options.name;
-        this.type = options.type;
-        this.points = options.points;
-    }
-    return Shape;
-})()
-
-Shape.prototype.types = vCanvas.TYPES;
-
-Shape.prototype.init = function(){
-    var type = this.type;
-    if(type == this.types.Rect){
-        var p1 = new Point({
-            index: 0,
-            name: "P-1",
-            x: 175,
-            y: 175,
-            color: this.color
-        });
-        var p2 = new Point({
-            index: 1,
-            name: "P-2",
-            x: 350,
-            y: 175,
-            color: this.color
-        });
-        var p3 = new Point({
-            index: 2,
-            name: "P-3",
-            x: 350,
-            y: 300,
-            color: this.color
-        });
-        var p4 = new Point({
-            index: 3,
-            name: "P-4",
-            x: 175,
-            y: 300,
-            color: this.color
-        });
-        this.points = [p1,p2,p3,p4];
-    }else if(type == this.types.VerticalLine){
-
-    }else if(type == this.types.ForizontalLine){
-
-    }else if(type == this.types.Line){
-
-    }
-}

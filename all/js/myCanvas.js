@@ -1,5 +1,6 @@
 types = {
     Rect: 100,
+    CalibRect: 101,
     Line: 200,
     HLine: 201,
     VLine: 202
@@ -765,6 +766,7 @@ var vcanvas = /** @class */ (function () {
                                 <thead>
                                     <tr>
                                         <th></th>
+                                        <th></th>
                                         <th>#</th>
                                         <th>Name</th>
                                         <th>Type</th>
@@ -1030,6 +1032,9 @@ var vcanvas = /** @class */ (function () {
                 <td>
                     <span id="${mother.id + '-' + s.name + '-spanRemoveShape-' + s.name}" class="table-remove fa fa-trash-o"></span>
                 </td>
+                <td>
+                    ${(s.type == types.Rect)? `<span id="${mother.id + '-' + s.name + '-calibRect-' + s.name}" class="table-calibRect fa fa-crop"></span>`:``}
+                </td>
                 <td class="text-center"  data-toggle="collapse" data-target="#${mother.id + '-'+s.name+'tr-pointDetail'}">
                     ${++stt}
                 </td>
@@ -1108,6 +1113,9 @@ var vcanvas = /** @class */ (function () {
             });
             $('#' + mother.id + '-' + s.name + '-switch-' + s.name).change(function () {
                 mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name);
+            });
+            $(`#${mother.id + '-' + s.name + '-calibRect-' + s.name}`).click(function(){
+                s.CalibRect();
             });
             $('#' + mother.id + '-' + s.name + '-spanRemoveShape-' + s.name).click(function () {
                 $(`#${mother.id+ '-' + s.name}-dialog-confirm`).dialog({
@@ -2279,15 +2287,64 @@ var Shape = /** @class */ (function () {
         t2 = (p1l1.left * a1 + p1l1.top * b1 + c1) * (p2l1.left * a1 + p2l1.top * b1 + c1);
         return (t1 < Number.EPSILON && t2 < Number.EPSILON) ? true : false;
     };
-    Shape.prototype.Extract = function (p1, p2) { //xay dung phuong trinh duong thang ax+by+c=0, tra ve a,b,c
-        var a = p1.top - p2.top;
-        var b = p1.left - p2.left;
-        var c = -(a * p1.left + b * p1.top);
-        return {
-            a: a,
-            b: b,
-            c: c
+    Shape.prototype.GetPoint = function(name){
+        for(var i=0; i < this.points.length; i++){
+            if (this.points[i].name == name){
+                return this.points[i];
+            }
+        }
+    }
+    Shape.prototype.CalibRect = function(){
+        var P3 = this.GetPoint("P-3");
+        var P4 = this.GetPoint("P-4");
+        var P2 = this.GetPoint("P-2");
+        var P1 = this.GetPoint("P-1");
+        var f_bottom = this.Extract(P3,P4);
+        var f23 = this.Extract(P2,P3);
+        var f12New = {
+            a: f_bottom.a,
+            b: f_bottom.b,
+            c: -f_bottom.a*P1.left - f_bottom.b*P1.top
         };
+        var NewP2 = this.CaculateIntersection(f23, f12New);
+        console.log(NewP2.x, NewP2.y);
+        P2.top = NewP2.y;
+        P2.left = NewP2.x;
+        // P2.left = vectoP3P4.y + P1.top;
+        this.Remove();
+        this.Draw({scaleFactor:globalScaleValue});
+    };
+    Shape.prototype.CaculateIntersection = function(f1,f2){
+        var d = f1.a*f2.b-f2.a*f1.b;
+        var dx = f1.c*f2.b-f2.c*f1.b;
+        var dy = f1.a*f2.c-f2.a*f1.c;
+        var x0 = 0;
+        var y0 = 0;
+        if(d){
+            x0 = dx/d * -1;
+            y0 = dy/d* -1;
+        }
+        return{
+            x:x0,y:y0
+        }
+    }
+    Shape.prototype.Extract = function (p1, p2) { //xay dung phuong trinh duong thang ax+by+c=0, tra ve a,b,c
+        //y = ax + b
+        var a = (p2.top - p1.top)/(p2.left - p1.left);
+        var c = p1.top - a*p2.left;
+        return{
+            a:a,
+            b:1,
+            c:c
+        }
+        // var a = p1.top - p2.top;
+        // var b = p1.left - p2.left;
+        // var c = -(a * p1.left + b * p1.top);
+        // return {
+        //     a: a,
+        //     b: b,
+        //     c: c
+        // };
     };
     Shape.prototype.GetNewCoodr = function (a, b) { //tinh lai toa do khi di chuyen
         for (var i = 0; i < this.points.length; ++i) {

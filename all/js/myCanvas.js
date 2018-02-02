@@ -1046,15 +1046,15 @@ var vcanvas = /** @class */ (function () {
                 </td>
                 ${this.extColumns.map(c => `
                     ${(c.type == typeColumns.Text) ? `
-                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-input-' + c.name}"  type="text" style="border:none; width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px" value="${s[c.name]?s[c.name]:``}" />
+                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-input-' + c.name}"  type="text" style="border:none; width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px" value="${s[c.name]!=null?s[c.name]:``}" />
                     </td>`: ``}
                     ${(c.type == typeColumns.Number) ? `
-                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-number-' + c.name}" name="value" style="border:none; width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px" value="${s[c.name]?s[c.name]:``}" />
+                    <td class="text-center"><input id="${mother.id + '-' + s.name + '-number-' + c.name}" name="value" style="border:none; width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px" value="${s[c.name]!=null?s[c.name]:``}" />
                     </td>`: ``}
                     ${(c.type == typeColumns.Combobox) ? `
                     <td class="text-center">
                         <select id="${mother.id + '-' + s.name + '-select-' + c.name}" style="border:none; width:${c.width?c.width+'px':'50px'}">
-                        ${c.data? c.data.map(d=>`<option ${d==s[c.name]? `selected="selected"`:``} value="${d}">${d}</option>
+                        ${c.data? c.data.map(d=>`<option ${d==s[c.name]!=null? `selected="selected"`:``} value="${d}">${d}</option>
                         `):``}
                         </select>
                     </td>`: ``}
@@ -1689,7 +1689,7 @@ var Shape = /** @class */ (function () {
             for (var i = 0; i < this.points.length; i++) {
                 if (this.points[i].name == "P-1") {
                     this.lbX = this.points[i].left - 5;
-                    this.lbY = this.points[i].top - 40;
+                    this.lbY = this.points[i].top - 50;
                     break;
                 }
             }
@@ -1705,8 +1705,8 @@ var Shape = /** @class */ (function () {
             fontSize: 40,
             fontFamily: "calibri",
             fill: this.color,
-            stroke: 'black',
-            strokeWidth: 0.2,
+            stroke: 'gray',
+            strokeWidth: 0.5,
             hasRotatingPoint: false,
             centerTransform: true,
             selectable: true
@@ -1825,6 +1825,23 @@ var Shape = /** @class */ (function () {
         var scaleFactor = options.scaleFactor;
         var strokeWidth = options.strokeWidth;
         var dlines = {};
+        var data = '';
+        if (ExtendOtions.length > 0) {
+            for (var i = 0; i < ExtendOtions.length; i++) {
+                var temp = this[ExtendOtions[i].name];
+                if (temp) {
+                    if (i == (ExtendOtions.length - 1)) {
+                        data += ExtendOtions[i].name + ':' + temp;
+                    } else {
+                        data += ExtendOtions[i].name + ':' + temp + '; ';
+                    }
+                }
+            }
+        }
+        this.DrawLabel({
+            data: data,
+            scaleFactor: scaleFactor
+        });
         if (this.type == types.Line) {
             var line = new fabric.Line([
                 this.points[0].left,
@@ -1934,23 +1951,7 @@ var Shape = /** @class */ (function () {
                 scaleFactor: scaleFactor
             });
         }
-        var data = '';
-        if (ExtendOtions.length > 0) {
-            for (var i = 0; i < ExtendOtions.length; i++) {
-                var temp = this[ExtendOtions[i].name];
-                if (temp) {
-                    if (i == (ExtendOtions.length - 1)) {
-                        data += ExtendOtions[i].name + ':' + temp;
-                    } else {
-                        data += ExtendOtions[i].name + ':' + temp + '; ';
-                    }
-                }
-            }
-        }
-        this.DrawLabel({
-            data: data,
-            scaleFactor: scaleFactor
-        });
+        
     };
     Shape.prototype.Move = function (params) {
         var properties = $.extend({

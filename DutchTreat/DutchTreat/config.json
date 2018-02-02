@@ -1,8 +1,0 @@
-{
-    "Color":{
-        "Favorite":"blue"
-    },
-    "ConnectionStrings":{
-        "DutchConnectionString":"server=DESKTOP-JFSJJDK;Database=DutchTreatDb;Integrated Security=true;MultipleActiveResultSets=true"
-    }
-}

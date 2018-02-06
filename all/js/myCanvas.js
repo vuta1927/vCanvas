@@ -3,7 +3,8 @@ types = {
     CalibRect: 101,
     Line: 200,
     HLine: 201,
-    VLine: 202
+    VLine: 202,
+    Text: 300
 };
 typeColumns = {
     Text: 100,
@@ -22,7 +23,8 @@ colors = {
     Rect: '#ff00ff',
     Line: '#00ff00',
     VerticalLine: '#0066ff',
-    HorizontalLine: '#ffff00'
+    HorizontalLine: '#ffff00',
+    Text: '#23EAEA'
 };
 (function () {
     function Create(params) {
@@ -56,7 +58,30 @@ colors = {
         canvasCollection.push(newCanvas);
         return newCanvas;
     }
+    function Add(json){
+        var Raw = JSON.parse(json);
+        var parentId = Raw.parent;
+        var backgroundUrl = Raw.backgroundUrl;
+        var types = Raw.types;
+        var extColumns = Raw.extColumns;
+        var maxShape = Raw.maxShape;
+        var randomColor = Raw.randomColor;
+        var shapes = Raw.shapes;
+        var newCanvas = new vcanvas({
+            id: GenerateId(),
+            types: types,
+            parent: parentId,
+            backgroundUrl: backgroundUrl,
+            extColumns: extColumns,
+            maxShape: maxShape,
+            randomColor: randomColor,
+            fromApi: true,
+            RawShapeData: shapes
+        });
 
+        canvasCollection.push(newCanvas);
+        return newCanvas;
+    }
     function GenerateId() {
         var index = 0;
         canvasCollection.forEach(function (obj) {
@@ -66,7 +91,8 @@ colors = {
     };
     myCanvas = {
         Create: Create,
-        GenerateId: GenerateId
+        GenerateId: GenerateId,
+        Add: Add,
     }
 })();
 var extColumn = (function () {
@@ -112,7 +138,9 @@ var vcanvas = /** @class */ (function () {
             currentWidth: null,
             currentHeight: null,
             maxShape: null,
-            randomColor: null
+            randomColor: null,
+            fromApi: false,
+            RawShapeData: []
         }, params);
         this.id = properties.id;
         this.parent = properties.parent; //id, ex: <div id='containner'>
@@ -133,6 +161,8 @@ var vcanvas = /** @class */ (function () {
         this.currentWidth = properties.currentWidth;
         this.maxShape = properties.maxShape;
         this.randomColor = properties.randomColor;
+        this.fromApi = properties.fromApi;
+        this.RawShapeData = properties.RawShapeData;
         this.init(this.js);
     }
 
@@ -142,6 +172,7 @@ var vcanvas = /** @class */ (function () {
         this.modalErrorId = this.id + '-modalError';
         this.btnChangeBackgroundSaveId = this.id + '-btnChangeBackgroundSave';
         this.btnAddRectId = this.id + '-btnAddRect';
+        this.btnAddText = this.id + '-btnAddText';
         this.btnAddVerticalLineId = this.id + '-btnAddVerticalLine';
         this.btnAddHorizontalLineId = this.id + '-btnAddHorizontalLine';
         this.btnDrawLineId = this.id + '-btnDrawLine';
@@ -182,16 +213,23 @@ var vcanvas = /** @class */ (function () {
         this.initId();
         this.initCss();
         var json = this.js;
-        if (json) {
+        if (json || this.fromApi) {
             this.shapes = [];
-            var RawData = JSON.parse(json);
-            this.types = RawData.types;
-            this.backgroundUrl = RawData.backgroundUrl ? RawData.backgroundUrl : '';
-            this.extColumns = RawData.extColumns;
-            this.maxShape = RawData.maxShape;
-            ExtendOtions = RawData.extColumns;
-            if (!this.randomColor)
-                this.randomColor = RawData.randomColor;
+            var RawData = {};
+            if(!this.fromApi) RawData = JSON.parse(json);
+            else RawData.shapes = this.RawShapeData;
+            if(!this.fromApi){
+                this.types = RawData.types;
+                this.backgroundUrl = RawData.backgroundUrl ? RawData.backgroundUrl : '';
+                this.extColumns = RawData.extColumns;
+                this.maxShape = RawData.maxShape;
+                ExtendOtions = RawData.extColumns;
+                if (!this.randomColor)
+                    this.randomColor = RawData.randomColor;
+            }else{
+                ExtendOtions = this.extColumns;
+            }
+            
             this.htmlRender();
             if (!this.canvas) {
                 this.canvas = new fabric.Canvas(this.id + '-canvas', {
@@ -227,53 +265,65 @@ var vcanvas = /** @class */ (function () {
                             type: s.type,
                             canvas: mother.canvas
                         });
+                        if(s.type == types.Text){
+                            newShape.lbX = GetValueFromPercent(s.left, globalImageWidth);
+                            newShape.lbY = GetValueFromPercent(s.top, globalImageHeight);
+                        }
                         if (!mother.randomColor) {
                             if (newShape.type == types.Rect) newShape.color = colors.Rect;
                             if (newShape.type == types.Line) newShape.color = colors.Line;
                             if (newShape.type == types.VLine) newShape.color = colors.VerticalLine;
                             if (newShape.type == types.HLine) newShape.color = colors.HorizontalLine;
+                            if (newShape.type == types.Text) newShape.color = colors.Text;
                         }
-                        for (var j = 0; j < s.points.length; j++) {
-                            var p = s.points[j];
-                            var newPoint = new Point({
-                                name: p.name,
-                                parentName: s.name,
-                                left: GetValueFromPercent(p.left, img.width),
-                                top: GetValueFromPercent(p.top, img.height),
-                                index: p.index
-                                // lockMovementX:(RawData.shapes[i].type === types.HLine)? false:true,
-                                // lockMovementY:(RawData.shapes[i].type === types.VLine)? false: true
-                            });
-                            if (s.type === types.HLine) {
-                                newPoint.lockMovementX = false;
-                                newPoint.lockMovementY = true;
-                            } else if (s.type === types.VLine) {
-                                newPoint.lockMovementX = true;
-                                newPoint.lockMovementY = false;
-                            } else if (s.type === types.Line || s.type === types.Rect) {
-                                newPoint.lockMovementX = false;
-                                newPoint.lockMovementY = false;
-                            }
-                            if (RawData.extColumns) {
-                                for (var z = 0; z < RawData.extColumns.length; z++) {
-                                    var column = RawData.extColumns[z];
-                                    newShape[column.name] = s[column.name];
+                        if(s.type != types.Text){
+                            for (var j = 0; j < s.points.length; j++) {
+                                var p = s.points[j];
+                                var newPoint = new Point({
+                                    name: p.name,
+                                    parentName: s.name,
+                                    left: GetValueFromPercent(p.left, img.width),
+                                    top: GetValueFromPercent(p.top, img.height),
+                                    index: p.index
+                                    // lockMovementX:(RawData.shapes[i].type === types.HLine)? false:true,
+                                    // lockMovementY:(RawData.shapes[i].type === types.VLine)? false: true
+                                });
+                                if (s.type === types.HLine) {
+                                    newPoint.lockMovementX = false;
+                                    newPoint.lockMovementY = true;
+                                } else if (s.type === types.VLine) {
+                                    newPoint.lockMovementX = true;
+                                    newPoint.lockMovementY = false;
+                                } else if (s.type === types.Line || s.type === types.Rect) {
+                                    newPoint.lockMovementX = false;
+                                    newPoint.lockMovementY = false;
                                 }
+                                if (RawData.extColumns) {
+                                    for (var z = 0; z < RawData.extColumns.length; z++) {
+                                        var column = RawData.extColumns[z];
+                                        newShape[column.name] = s[column.name];
+                                    }
+                                }
+                                newShape.points.push(newPoint);
                             }
-                            newShape.points.push(newPoint);
                         }
-                        newShape.lbX = s.lbX;
-                        newShape.lbY = s.lbY;
+                        for(var k=0; k < mother.extColumns.length; k++){
+                            var name = mother.extColumns[k].name;
+                            newShape[name] = s[name]? s[name]:null;
+                        }
+                        
+                        newShape.readOnly = s.readOnly;
+                        newShape.viewOnly = s.viewOnly;
                         mother.shapes.push(newShape);
                     }
                     mother.canvas.renderAll();
                     mother.background = bgr;
 
                     mother.initEvent();
-                    mother.loadDataToTable();
-                    mother.shapes.forEach(function (shape) {
-                        shape.Draw();
+                    mother.shapes.forEach(function(s){
+                        s.Draw();
                     })
+                    mother.loadDataToTable();
                 }
             });
 
@@ -342,7 +392,22 @@ var vcanvas = /** @class */ (function () {
                     type: types.Rect
                 });
             });
-
+            $('#' + mother.btnAddText).click(function () {
+                url = mother.backgroundUrl;
+                if (!url) {
+                    $('#' + mother.bgModalId).modal('show');
+                    $('#' + mother.modalErrorId).text("");
+                    $('#' + mother.modalErrorId).text("There are no image yet. Please enter your image url to add image!");
+                    return;
+                }
+                if (mother.shapes.length == mother.maxShape && mother.maxShape > 0) {
+                    alert("You have reach to the limit of shapes, please change the max size value for drawing more!");
+                    return;
+                }
+                mother.Add({
+                    type: types.Text
+                });
+            });
             $('#' + mother.btnAddVerticalLineId).click(function () {
                 url = mother.backgroundUrl;
                 if (!url) {
@@ -677,6 +742,7 @@ var vcanvas = /** @class */ (function () {
                 var scaleValue = p.scaleX;
                 var pointer = c.getPointer(e.e);
                 var allObject = c.getObjects();
+                
                 if (p.name.split('-')[0] == "i" || p.name.split('-')[0] == 'lb') {
                     for (var i = 0; i < mother.shapes.length; i++) {
                         if (p.parentName == mother.shapes[i].name) {
@@ -686,6 +752,20 @@ var vcanvas = /** @class */ (function () {
                                 offsetX: e.e.movementX * globalStrokeWidth,
                                 offsetY: e.e.movementY * globalStrokeWidth,
                                 scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
+                            break;
+                        }
+                    }
+                } else if (p.name.split('-')[0] == 'Text') {
+                    for (var i = 0; i < mother.shapes.length; i++) {
+                        if (p.name == mother.shapes[i].name) {
+                            mother.ActiveObject = mother.shapes[i];
+                            mother.ActiveObject.isMoving = true;
+                            mother.shapes[i].Move({
+                                offsetX: p.left,
+                                offsetY: p.top,
+                                scaleFactor: scaleValue,
                                 strokeWidth: globalStrokeWidth
                             });
                             break;
@@ -733,6 +813,7 @@ var vcanvas = /** @class */ (function () {
                         <div class="col-md-12 col-xs-12 canvas-div">
                             ${this.types.map(t => `
                             ${(t == types.Rect) ? `<button type="button" class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>` : ``}
+                            ${(t == types.Text) ? `<button type="button" class="btn btn-sm btn-Default" id="${this.btnAddText}" ><i class="fa fa-plus"></i> Add Text</button>` : ``}
                             ${(t == types.VLine || t == types.Line) ? `<button type="button" class="btn btn-sm btn-success" id="${this.btnAddVerticalLineId}"><i class="fa fa-arrows-v"></i> Add vertical line</button>` : ``}
                             ${(t == types.HLine || t == types.Line) ? `<button type="button" class="btn btn-sm btn-success" id="${this.btnAddHorizontalLineId}"><i class="fa fa-arrows-h"></i> Add horizontal line</button>` : ``}
                             ${(t == types.Line || t == types.Line) ? `<button type="button" class="btn btn-sm btn-danger" id="${this.btnDrawLineId}"><i class="fa fa-pencil"></i> Draw line</button>` : ``}
@@ -765,9 +846,10 @@ var vcanvas = /** @class */ (function () {
                             <table id="${this.tableId}" class="tblShape table table-hover table-sm text-center">
                                 <thead>
                                     <tr>
-                                        <th></th>
-                                        <th></th>
                                         <th>#</th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
                                         <th>Name</th>
                                         <th>Type</th>
                                         ${this.extColumns.map(c => `
@@ -818,10 +900,10 @@ var vcanvas = /** @class */ (function () {
                 `;
 
         var mother = this;
-        $('#'+ this.txtNameColumnId).keypress(function () {
+        $('#' + this.txtNameColumnId).keypress(function () {
             return mother.ValidateKey();
         });
-        $('#'+this.txtWidthColumn).keypress(function () {
+        $('#' + this.txtWidthColumn).keypress(function () {
             return mother.ValidateNumber();
         });
         $(`#${this.selectTypeColumnId}`).change(function () {
@@ -1028,15 +1110,19 @@ var vcanvas = /** @class */ (function () {
         parentElement = null;
         var stt = 0;
         context = `${mother.shapes.map(s =>
-            `<tr>
+            `${s.viewOnly?``:`
+            <tr>
+            <td class="text-center"  data-toggle="collapse" data-target="#${mother.id + '-'+s.name+'tr-pointDetail'}">
+                ${++stt}
+            </td>
                 <td>
                     <span id="${mother.id + '-' + s.name + '-spanRemoveShape-' + s.name}" class="table-remove fa fa-trash-o"></span>
                 </td>
                 <td>
                     ${(s.type == types.Rect && s.points.length <= 4)? `<span id="${mother.id + '-' + s.name + '-calibRect-' + s.name}" class="table-calibRect fa fa-crop"></span>`:``}
                 </td>
-                <td class="text-center"  data-toggle="collapse" data-target="#${mother.id + '-'+s.name+'tr-pointDetail'}">
-                    ${++stt}
+                <td>
+                    <label style="width:80px;padding:0px;margin:0px;font-size:10pt" id="${mother.id + '-' + s.name + '-lblreadonly'}"><input type="checkbox" style="vertical-align: middle;" name="${mother.id + '-' + s.name + '-readonly'}" id="${mother.id + '-' + s.name + '-readonly'}" ${s.readOnly? `Checked`:``} > Readonly</label>
                 </td>
                 <td class="text-center">
                     <input id="${mother.id + '-' + s.name + '-input-' + s.name}" type="text" style="border:none; width:100%;padding:0px;margin:0px" value="${s.name}" />
@@ -1044,6 +1130,9 @@ var vcanvas = /** @class */ (function () {
                 <td>
                     ${getKeyByValue(types, s.type)}
                 </td>
+                ${s.type == types.Text ? `
+
+                `:`
                 ${this.extColumns.map(c => `
                     ${(c.type == typeColumns.Text) ? `
                     <td class="text-center"><input id="${mother.id + '-' + s.name + '-input-' + c.name}"  type="text" style="border:none; width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px" value="${s[c.name]!=null?s[c.name]:``}" />
@@ -1062,6 +1151,8 @@ var vcanvas = /** @class */ (function () {
                     <td><input id="${mother.id + '-' + s.name + '-checkbox-' + c.name}"  type="checkbox" style="width:${c.width?c.width+'px':'50px'};padding:0px;margin:0px"/>
                     </td>`: ``}
                 `)}
+                `}
+                
                 <td id="0" data-col="0" class="text-center">
                     ${(s.type == types.Rect) ? (s.AddPointMode ? `
                     <label class="switch"><input type="checkbox" id="${mother.id + '-' + s.name + '-switch-' + s.name}" checked title="Click on picture where you want to add point!"><span class="slider round"></span></label>` : `
@@ -1073,22 +1164,34 @@ var vcanvas = /** @class */ (function () {
                     <div id="${mother.id + '-'+s.name+'tr-pointDetail'}" class="accordian-body collapse">
                     <table style="background-color: #fff;" class="tblShapeDetail table" >
                         <thead>
-                            <tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td><td></td></tr>
+                        ${s.type==types.Text?`<tr><td><b>X</b></td><td><b>Y</b></td><td></td></tr>`:
+                        `<tr><td><b>Point</b></td><td><b>X</b></td><td><b>Y</b></td><td></td></tr>`}
+                            
                         </thead>
                     <tbody>
-                ${s.points.map(p =>
-                `<tr id="${mother.id + '-' + s.name + '-tr-' + p.name}" class="text-center">
-                    <td  hidden="true">${s.name}</td>
-                    <td>${p.name}</td>
-                    <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
-                    <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
-                    ${s.type == types.Rect ? `
-                    <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
-                </tr>`
-            ).join('')}</tbody></table>
+                ${s.type==types.Text? `
+                <tr id="${mother.id + '-tr-' + s.name}" class="text-center">
+                        <td  hidden="true">${s.name}</td>
+                        <td>${(mother.background.width) ? parseFloat(s.lbX / mother.background.width).toFixed(2) : parseFloat(s.lbX).toFixed(2)}</td>
+                        <td>${(mother.background.height) ? parseFloat(s.lbY / mother.background.height).toFixed(2) : parseFloat(s.lbY).toFixed(2)}</td>
+                        `:
+                `${s.points.map(p =>
+                    `<tr id="${mother.id + '-' + s.name + '-tr-' + p.name}" class="text-center">
+                        <td  hidden="true">${s.name}</td>
+                        <td>${p.name}</td>
+                        <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
+                        <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
+                        ${s.type == types.Rect ? `
+                            <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
+                        </tr>`).join('')}`
+                }
+                
+                    </tbody>
+                    </table>
             <div id="${mother.id+ '-' + s.name}-dialog-confirm" title="Are you sure to delete ${s.name} ?"></div>
             </div>
             </td></tr>
+            `}
             `)}`;
         $('.accordian-body').on('show.bs.collapse', function () {
             $(this).closest("table")
@@ -1101,6 +1204,18 @@ var vcanvas = /** @class */ (function () {
         }).remove();
         $('#' + this.tableId + ' tr:last').after(context);
         mother.shapes.forEach(function (s) {
+            $(`#${mother.id + '-' + s.name + '-readonly'}`).change(function(){
+                if(this.checked){
+                    s.readOnly = true;
+                }else{
+                    s.readOnly = false;
+                }
+                s.Remove();
+                s.Draw({
+                    scaleFactor: globalScaleValue,
+                    strokeWidth: globalStrokeWidth
+                });
+            });
             $('#' + mother.id + '-' + s.name + '-input-' + s.name).click(function () {
                 mother.onInputClicked(s)
             });
@@ -1108,13 +1223,16 @@ var vcanvas = /** @class */ (function () {
                 return mother.ValidateKey()
             });
             $('#' + mother.id + '-' + s.name + '-input-' + s.name).change(function () {
-                mother.textChange(mother.id + '-' + s.name + '-input-' + s.name);
+                if(!s.readOnly)
+                    mother.textChange(mother.id + '-' + s.name + '-input-' + s.name);
             });
             $('#' + mother.id + '-' + s.name + '-switch-' + s.name).change(function () {
-                mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name);
+                if(!s.readOnly)
+                    mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name);
             });
-            $(`#${mother.id + '-' + s.name + '-calibRect-' + s.name}`).click(function(){
-                s.CalibRect();
+            $(`#${mother.id + '-' + s.name + '-calibRect-' + s.name}`).click(function () {
+                if(!s.readOnly)
+                    s.CalibRect();
             });
             $('#' + mother.id + '-' + s.name + '-spanRemoveShape-' + s.name).click(function () {
                 $(`#${mother.id+ '-' + s.name}-dialog-confirm`).dialog({
@@ -1153,8 +1271,30 @@ var vcanvas = /** @class */ (function () {
                 mother.extColumns.forEach(function (c) {
                     $('#' + mother.id + '-' + s.name + '-number-' + c.name).spinner({
                         change: function () {
+                            if(!s.viewOnly){
+                                var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
+                                if(s[c.name]) s[c.name] = element.value;
+                                s.Remove();
+                                s.Draw({
+                                    scaleFactor: globalScaleValue,
+                                    strokeWidth: globalStrokeWidth
+                                });
+                                mother.triggerHandler('CanvasModified', {
+                                    event: c.name + " change",
+                                    source: mother
+                                });
+                                s.Remove();
+                                s.Draw({
+                                    scaleFactor: globalScaleValue,
+                                    strokeWidth: globalStrokeWidth
+                                });
+                            }
+                        }
+                    });
+                    $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
+                        if(!s.viewOnly){
                             var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
-                            s[c.name] = element.value;
+                            if(s[c.name]) s[c.name] = element.value;
                             s.Remove();
                             s.Draw({
                                 scaleFactor: globalScaleValue,
@@ -1171,47 +1311,34 @@ var vcanvas = /** @class */ (function () {
                             });
                         }
                     });
-                    $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
-                        var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
-                        s[c.name] = element.value;
-                        s.Remove();
-                        s.Draw({
-                            scaleFactor: globalScaleValue,
-                            strokeWidth: globalStrokeWidth
-                        });
-                        mother.triggerHandler('CanvasModified', {
-                            event: c.name + " change",
-                            source: mother
-                        });
-                        s.Remove();
-                        s.Draw({
-                            scaleFactor: globalScaleValue,
-                            strokeWidth: globalStrokeWidth
-                        });
-                    });
                     if (c.type == typeColumns.Combobox) {
-                        var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
-                        s[c.name] = element.value;
-                        s.Remove();
-                        s.Draw({
-                            scaleFactor: globalScaleValue,
-                            strokeWidth: globalStrokeWidth
-                        });
+                        if(!s.viewOnly){
+                            var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
+                            if(s[c.name]) s[c.name] = element.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
+                        }
                     }
                     $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
-                        var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
-                        s[c.name] = element.value;
-                        s.Remove();
-                        s.Draw({
-                            scaleFactor: globalScaleValue,
-                            strokeWidth: globalStrokeWidth
-                        });
-                        mother.triggerHandler('CanvasModified', {
-                            event: c.name + " change",
-                            source: mother
-                        });
+                        if(!s.viewOnly){
+                            var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
+                            if(s[c.name]) s[c.name] = element.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " change",
+                                source: mother
+                            });
+                        }
                     });
                     $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function () {
+                        if(!s.viewOnly){
                         var element = document.getElementById(mother.id + '-' + s.name + '-input-' + c.name);
                         s[c.name] = element.value;
                         s.Remove();
@@ -1228,6 +1355,7 @@ var vcanvas = /** @class */ (function () {
                             scaleFactor: globalScaleValue,
                             strokeWidth: globalStrokeWidth
                         });
+                    }
                     });
                 });
             }
@@ -1368,6 +1496,7 @@ var vcanvas = /** @class */ (function () {
         ExportObject.randomColor = this.randomColor;
         var extendColumns = this.extColumns;
         var image = this.background;
+        var mother = this;
         this.shapes.forEach(function (shape) {
             var ShapeExportObj = {};
             extendColumns.forEach(function (column) {
@@ -1376,6 +1505,14 @@ var vcanvas = /** @class */ (function () {
             ShapeExportObj.name = shape.name;
             ShapeExportObj.type = shape.type;
             ShapeExportObj.points = [];
+            ShapeExportObj.readOnly = shape.readOnly;
+            ShapeExportObj.viewOnly = shape.viewOnly;
+            if(shape.type == types.Text){
+                var obj = mother.canvas.getItem(shape.name,null);
+                var bound = obj.getBoundingRect();
+                ShapeExportObj.left = parseFloat(shape.lbX/image.width).toFixed(2);
+                ShapeExportObj.top = parseFloat((shape.lbY+bound.height)/image.height).toFixed(2);
+            }
             shape.points.forEach(function (point) {
                 ShapeExportObj.points.push({
                     index: point.index,
@@ -1414,12 +1551,15 @@ var vcanvas = /** @class */ (function () {
             newShape.VerticalLine();
         } else if (type == types.HLine) {
             newShape.HorizontalLine();
+        } else if (type == types.Text) {
+            newShape.Text();
         }
         if (!this.randomColor) {
             if (type == types.Rect) newShape.color = colors.Rect;
             if (type == types.VLine) newShape.color = colors.VerticalLine;
             if (type == types.HLine) newShape.color = colors.HorizontalLine;
             if (type == types.Line) newShape.color = colors.Line;
+            if (type == types.Text) newShape.color = colors.Text;
         }
         newShape.Draw({
             scaleFactor: globalScaleValue,
@@ -1463,6 +1603,8 @@ var vcanvas = /** @class */ (function () {
                 name = "VLine-" + i;
             else if (type === types.HLine)
                 name = "HLine-" + i;
+            else if (type === types.Text)
+                name = "Text-" + i;
             else
                 name = "Rect-" + i;
             if (lstName.indexOf(name) == -1) {
@@ -1605,7 +1747,9 @@ var Point = /** @class */ (function () {
             stroke: null,
             lockMovementX: false,
             lockMovementY: false,
-            canvas: null
+            canvas: null,
+            readOnly: false,
+            viewOnly: false
 
         }, params);
         this.index = properties.index;
@@ -1618,15 +1762,20 @@ var Point = /** @class */ (function () {
         this.lockMovementX = properties.lockMovementX;
         this.lockMovementY = properties.lockMovementY;
         this.canvas = properties.canvas;
+        this.readOnly = properties.readOnly;
+        this.viewOnly = properties.viewOnly;
     }
     Point.prototype.Draw = function (params) {
         var options = $.extend({
             canvas: null,
-            scaleFactor: null
+            scaleFactor: null,
+            readOnly: false,
+            viewOnly: false
         }, params);
         var c = options.canvas;
         var scaleFactor = options.scaleFactor;
-
+        this.readOnly = options.readOnly;
+        this.viewOnly = options.viewOnly;
         var p = new fabric.Circle({
             left: this.left,
             top: this.top,
@@ -1636,7 +1785,8 @@ var Point = /** @class */ (function () {
             stroke: "black",
             name: this.name,
             parentName: this.parentName,
-            hoverCursor: "pointer"
+            hoverCursor: "pointer",
+            selectable: !this.readOnly
         });
         if (scaleFactor) {
             p.scaleX = scaleFactor;
@@ -1668,7 +1818,9 @@ var Shape = /** @class */ (function () {
             lbX: 0,
             lbY: 0,
             AddPointMode: false,
-            canvas: null
+            canvas: null,
+            readOnly: false,
+            viewOnly: false
         }, params);
         this.name = properties.name;
         this.type = properties.type;
@@ -1676,6 +1828,8 @@ var Shape = /** @class */ (function () {
         this.color = properties.color;
         this.isMoving = properties.isMoving;
         this.canvas = properties.canvas;
+        this.readOnly = properties.readOnly;
+        this.viewOnly = properties.viewOnly;
     };
     Shape.prototype.DrawLabel = function (params) {
         var options = $.extend({
@@ -1685,7 +1839,7 @@ var Shape = /** @class */ (function () {
         var data = options.data;
         var scaleFactor = options.scaleFactor;
 
-        if (!this.lbX && !this.lbY) {
+        if (!this.lbX && !this.lbY && this.type != types.Text) {
             for (var i = 0; i < this.points.length; i++) {
                 if (this.points[i].name == "P-1") {
                     this.lbX = this.points[i].left - 5;
@@ -1695,21 +1849,22 @@ var Shape = /** @class */ (function () {
             }
         }
         var context = '';
-        if (data) context = this.name + '( ' + data + ' )';
+        if (data && this.type != types.Text) context = this.name + '( ' + data + ' )';
         else context = this.name;
         var label = new fabric.IText(context, {
-            name: "lb-" + this.name,
-            parentName: this.name,
+            name: this.type == types.Text ? this.name : "lb-" + this.name,
+            parentName: this.type == types.Text ? null : this.name,
             left: this.lbX,
             top: this.lbY,
             fontSize: 40,
             fontFamily: "calibri",
             fill: this.color,
-            stroke: 'gray',
-            strokeWidth: 0.5,
+            stroke: 'black',
+            strokeWidth: this.type == types.Text ? 1 : 0.5,
             hasRotatingPoint: false,
             centerTransform: true,
-            selectable: true
+            selectable: !this.readOnly,
+            viewOnly: this.viewOnly
         });
         if (scaleFactor) {
             label.scaleX = scaleFactor;
@@ -1729,7 +1884,9 @@ var Shape = /** @class */ (function () {
             top: GetValueFromPercent(0.1, globalImageHeight), //175
             fill: this.color,
             stroke: this.color,
-            canvas: this.canvas
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
         });
         var p2 = new Point({
             index: 1,
@@ -1739,7 +1896,9 @@ var Shape = /** @class */ (function () {
             top: GetValueFromPercent(0.10, globalImageHeight), //175
             fill: this.color,
             stroke: this.color,
-            canvas: this.canvas
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
         });
         var p3 = new Point({
             index: 2,
@@ -1749,7 +1908,9 @@ var Shape = /** @class */ (function () {
             top: GetValueFromPercent(0.20, globalImageHeight), //300
             fill: this.color,
             stroke: this.color,
-            canvas: this.canvas
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
         });
         var p4 = new Point({
             index: 3,
@@ -1759,7 +1920,9 @@ var Shape = /** @class */ (function () {
             top: GetValueFromPercent(0.20, globalImageHeight),
             fill: this.color,
             stroke: this.color,
-            canvas: this.canvas
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
         });
         this.points = [p1, p2, p3, p4];
     }
@@ -1775,7 +1938,9 @@ var Shape = /** @class */ (function () {
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
-                    canvas: this.canvas
+                    canvas: this.canvas,
+                    readOnly: this.readOnly,
+                    viewOnly: this.viewOnly
                 }),
                 new Point({
                     index: 1,
@@ -1786,7 +1951,9 @@ var Shape = /** @class */ (function () {
                     fill: this.color,
                     stroke: this.color,
                     lockMovementX: true,
-                    canvas: this.canvas
+                    canvas: this.canvas,
+                    readOnly: this.readOnly,
+                    viewOnly: this.viewOnly
                 })
             ];
     }
@@ -1802,7 +1969,9 @@ var Shape = /** @class */ (function () {
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
-                canvas: this.canvas
+                canvas: this.canvas,
+                readOnly: this.readOnly,
+                viewOnly: this.viewOnly
             }),
             new Point({
                 index: 1,
@@ -1813,9 +1982,16 @@ var Shape = /** @class */ (function () {
                 fill: this.color,
                 stroke: this.color,
                 lockMovementY: true,
-                canvas: this.canvas
+                canvas: this.canvas,
+                readOnly: this.readOnly,
+                viewOnly: this.viewOnly
             })
         ];
+    }
+    Shape.prototype.Text = function () {
+        this.type = types.Text;
+        this.lbX = GetValueFromPercent(0.15, globalImageWidth);
+        this.lbY = GetValueFromPercent(0.20, globalImageHeight);
     }
     Shape.prototype.Draw = function (params) {
         var options = $.extend({
@@ -1826,7 +2002,7 @@ var Shape = /** @class */ (function () {
         var strokeWidth = options.strokeWidth;
         var dlines = {};
         var data = '';
-        if (ExtendOtions.length > 0) {
+        if (ExtendOtions.length > 0) { //add external properties of shape on label
             for (var i = 0; i < ExtendOtions.length; i++) {
                 var temp = this[ExtendOtions[i].name];
                 if (temp) {
@@ -1838,120 +2014,131 @@ var Shape = /** @class */ (function () {
                 }
             }
         }
-        this.DrawLabel({
-            data: data,
-            scaleFactor: scaleFactor
-        });
-        if (this.type == types.Line) {
-            var line = new fabric.Line([
-                this.points[0].left,
-                this.points[0].top,
-                this.points[1].left,
-                this.points[1].top
-            ], {
-                name: this.name,
-                parentName: this.name,
-                fill: this.color,
-                stroke: this.color,
-                originX: 'center',
-                originY: 'center',
-                selectable: false,
-                perPixelTargetFind: true
+        if (this.type != types.Text) {
+            this.DrawLabel({
+                data: data,
+                scaleFactor: scaleFactor
             });
-            if (strokeWidth) {
-                line.strokeWidth = strokeWidth;
-            } else {
-                line.strokeWidth = 3;
-            }
-            this.lines = [line.name];
-            dlines[line.name] = line;
-            this.canvas.add(line);
-        } else if (this.type == types.VLine || this.type == types.HLine) {
-            var line = new fabric.Line([
-                this.points[0].left,
-                this.points[0].top,
-                this.points[1].left,
-                this.points[1].top
-            ], {
-                name: this.name,
-                parentName: this.name,
-                fill: this.color,
-                stroke: this.color,
-                originX: 'center',
-                originY: 'center',
-                selectable: false
-            });
-            if (strokeWidth) {
-                line.strokeWidth = globalStrokeWidth;
-            } else {
-                line.strokeWidth = 3;
-            }
-            this.lines = [line.name];
-            dlines[line.name] = line;
-            this.canvas.add(line);
-        } else {
-            for (var i = 0; i < this.points.length; i++) {
-                var line;
-                if (i !== (this.points.length - 1)) {
-                    line = new fabric.Line([
-                        this.points[i].left,
-                        this.points[i].top,
-                        this.points[i + 1].left,
-                        this.points[i + 1].top
-                    ], {
-                        name: "line" + i,
-                        parentName: this.name,
-                        fill: this.color,
-                        stroke: this.color,
-                        selectable: false,
-                        hasControls: false,
-                        hasBorders: false,
-                        hasRotatingPoint: false,
-                        hoverCursor: this.hoverCursor,
-                        perPixelTargetFind: true
-                    });
+            if (this.type == types.Line) {
+                var line = new fabric.Line([
+                    this.points[0].left,
+                    this.points[0].top,
+                    this.points[1].left,
+                    this.points[1].top
+                ], {
+                    name: this.name,
+                    parentName: this.name,
+                    fill: this.color,
+                    stroke: this.color,
+                    originX: 'center',
+                    originY: 'center',
+                    selectable: !this.readOnly,
+                    viewOnly: this.viewOnly,
+                    perPixelTargetFind: true
+                });
+                if (strokeWidth) {
+                    line.strokeWidth = strokeWidth;
                 } else {
-                    line = new fabric.Line([this.points[i].left, this.points[i].top,
-                        this.points[0].left, this.points[0].top
-                    ], {
-                        name: "line" + i,
-                        parentName: this.name,
-                        fill: this.color,
-                        stroke: this.color,
-                        selectable: false,
-                        hasControls: false,
-                        hasBorders: false,
-                        hasRotatingPoint: false,
-                        hoverCursor: this.hoverCursor,
-                        perPixelTargetFind: true
-                    });
+                    line.strokeWidth = 3;
                 }
-                if (globalStrokeWidth) {
+                this.lines = [line.name];
+                dlines[line.name] = line;
+                this.canvas.add(line);
+            } else if (this.type == types.VLine || this.type == types.HLine) {
+                var line = new fabric.Line([
+                    this.points[0].left,
+                    this.points[0].top,
+                    this.points[1].left,
+                    this.points[1].top
+                ], {
+                    name: this.name,
+                    parentName: this.name,
+                    fill: this.color,
+                    stroke: this.color,
+                    originX: 'center',
+                    originY: 'center',
+                    selectable: false
+                });
+                if (strokeWidth) {
                     line.strokeWidth = globalStrokeWidth;
                 } else {
                     line.strokeWidth = 3;
                 }
+                this.lines = [line.name];
                 dlines[line.name] = line;
                 this.canvas.add(line);
-            }
+            } else {
+                for (var i = 0; i < this.points.length; i++) {
+                    var line;
+                    if (i !== (this.points.length - 1)) {
+                        line = new fabric.Line([
+                            this.points[i].left,
+                            this.points[i].top,
+                            this.points[i + 1].left,
+                            this.points[i + 1].top
+                        ], {
+                            name: "line" + i,
+                            parentName: this.name,
+                            fill: this.color,
+                            stroke: this.color,
+                            selectable: false,
+                            hasControls: false,
+                            hasBorders: false,
+                            hasRotatingPoint: false,
+                            hoverCursor: this.hoverCursor,
+                            perPixelTargetFind: true
+                        });
+                    } else {
+                        line = new fabric.Line([this.points[i].left, this.points[i].top,
+                            this.points[0].left, this.points[0].top
+                        ], {
+                            name: "line" + i,
+                            parentName: this.name,
+                            fill: this.color,
+                            stroke: this.color,
+                            selectable: false,
+                            hasControls: false,
+                            hasBorders: false,
+                            hasRotatingPoint: false,
+                            hoverCursor: this.hoverCursor,
+                            perPixelTargetFind: true
+                        });
+                    }
+                    if (globalStrokeWidth) {
+                        line.strokeWidth = globalStrokeWidth;
+                    } else {
+                        line.strokeWidth = 3;
+                    }
+                    dlines[line.name] = line;
+                    this.canvas.add(line);
+                }
 
-            var arrLine = [];
-            Object.keys(dlines).forEach(function (key) {
-                var value = dlines[key].name;
-                arrLine.push(value);
+                var arrLine = [];
+                Object.keys(dlines).forEach(function (key) {
+                    var value = dlines[key].name;
+                    arrLine.push(value);
+                });
+                this.lines = arrLine;
+            }
+            this.FillInside();
+            for (var i = 0; i < this.points.length; i++) {
+                this.points[i].hoverCursor = this.hoverCursor;
+                this.points[i].fill = this.color;
+                this.points[i].Draw({
+                    canvas: this.canvas,
+                    scaleFactor: scaleFactor,
+                    readOnly: this.readOnly,
+                    viewOnly: this.viewOnly
+                });
+            }
+        } else {
+            this.DrawLabel({
+                scaleFactor: scaleFactor,
+                data: data
             });
-            this.lines = arrLine;
         }
-        this.FillInside();
-        for (var i = 0; i < this.points.length; i++) {
-            this.points[i].hoverCursor = this.hoverCursor;
-            this.points[i].fill = this.color;
-            this.points[i].Draw({
-                canvas: this.canvas,
-                scaleFactor: scaleFactor
-            });
-        }
-        
+
+
     };
     Shape.prototype.Move = function (params) {
         var properties = $.extend({
@@ -1970,24 +2157,34 @@ var Shape = /** @class */ (function () {
         var point = properties.point;
         var scaleFactor = properties.scaleFactor;
         var strokeWidth = properties.strokeWidth;
-        this.Remove();
-        if (point) {
-            for (var i = 0; i < this.points.length; i++) {
-                if (point.name === this.points[i].name) {
-                    this.points[i].left = point.left;
-                    this.points[i].top = point.top;
-                    break;
+        if (this.type != types.Text) {
+            this.Remove();
+            if (point) {
+                for (var i = 0; i < this.points.length; i++) {
+                    if (point.name === this.points[i].name) {
+                        this.points[i].left = point.left;
+                        this.points[i].top = point.top;
+                        break;
+                    }
                 }
+                this.lbX = this.points[0].left + 5;
+                this.lbY = this.points[0].top - 30;
+            } else {
+                this.GetNewCoodr(offsetX, offsetY);
             }
-            this.lbX = this.points[0].left + 5;
-            this.lbY = this.points[0].top - 30;
-        } else {
-            this.GetNewCoodr(offsetX, offsetY);
+            this.Draw({
+                scaleFactor: scaleFactor,
+                strokeWidth: strokeWidth
+            });
+        }else{
+            this.lbX = offsetX;
+            this.lbY = offsetY;
+            this.Remove();
+            this.Draw({
+                scaleFactor: scaleFactor,
+                strokeWidth: strokeWidth
+            });
         }
-        this.Draw({
-            scaleFactor: scaleFactor,
-            strokeWidth: strokeWidth
-        });
     }
     Shape.prototype.FillInside = function () {
         var pathDirection = 'M';
@@ -2002,7 +2199,9 @@ var Shape = /** @class */ (function () {
             opacity: 0.01,
             hasControls: false,
             hasBorders: false,
-            hasRotatingPoint: false
+            hasRotatingPoint: false,
+            selectable: !this.readOnly,
+            viewOnly: this.viewOnly
         });
         if (this.type === types.Rect || this.type === types.Line) {
             path.set({
@@ -2018,17 +2217,23 @@ var Shape = /** @class */ (function () {
     Shape.prototype.Rename = function (newName) {
         var oldName = this.name;
         this.name = newName;
-        for (var i = 0; i < this.points.length; i++) {
-            this.points[i].parentName = newName;
-            var p = this.canvas.getItem(this.points[i].name, oldName);
-            this.canvas.remove(p);
+        if (this.type != types.Text) {
+            for (var i = 0; i < this.points.length; i++) {
+                this.points[i].parentName = newName;
+                var p = this.canvas.getItem(this.points[i].name, oldName);
+                this.canvas.remove(p);
+            }
+            for (var j = 0; j < this.lines.length; j++) {
+                var line = this.canvas.getItem(this.lines[j], oldName);
+                this.canvas.remove(line);
+            }
+            var label = this.canvas.getItem("lb-" + oldName);
+            this.canvas.remove(label);
+        } else {
+            var lb = this.canvas.getItem(oldName);
+            this.canvas.remove(lb);
         }
-        for (var j = 0; j < this.lines.length; j++) {
-            var line = this.canvas.getItem(this.lines[j], oldName);
-            this.canvas.remove(line);
-        }
-        var label = this.canvas.getItem("lb-" + oldName);
-        this.canvas.remove(label);
+
         this.Draw({
             scaleFactor: globalScaleValue,
             strokeWidth: globalStrokeWidth
@@ -2117,6 +2322,10 @@ var Shape = /** @class */ (function () {
         return comparison;
     };
     Shape.prototype.Remove = function () {
+        if (this.type == types.Text) {
+            var obj = this.canvas.getItem(this.name, null);
+            this.canvas.remove(obj);
+        }
         var objs = this.canvas.getItem('', this.name);
         for (var i = 0; i < objs.length; i++) {
             this.canvas.remove(objs[i]);
@@ -2287,44 +2496,47 @@ var Shape = /** @class */ (function () {
         t2 = (p1l1.left * a1 + p1l1.top * b1 + c1) * (p2l1.left * a1 + p2l1.top * b1 + c1);
         return (t1 < Number.EPSILON && t2 < Number.EPSILON) ? true : false;
     };
-    Shape.prototype.GetPoint = function(name){
-        for(var i=0; i < this.points.length; i++){
-            if (this.points[i].name == name){
+    Shape.prototype.GetPoint = function (name) {
+        for (var i = 0; i < this.points.length; i++) {
+            if (this.points[i].name == name) {
                 return this.points[i];
             }
         }
     }
-    Shape.prototype.CalibRect = function(){
+    Shape.prototype.CalibRect = function () {
         var P3 = this.GetPoint("P-3");
         var P4 = this.GetPoint("P-4");
         var P2 = this.GetPoint("P-2");
         var P1 = this.GetPoint("P-1");
-        var f_bottom = this.Extract(P3,P4);
-        var f23 = this.Extract(P2,P3);
+        var f_bottom = this.Extract(P3, P4);
+        var f23 = this.Extract(P2, P3);
         var f12New = {
             a: f_bottom.a,
             b: f_bottom.b,
-            c: -f_bottom.a*P1.left - f_bottom.b*P1.top
+            c: -f_bottom.a * P1.left - f_bottom.b * P1.top
         };
         var NewP2 = this.CaculateIntersection(f23, f12New);
         P2.top = NewP2.y;
         P2.left = NewP2.x;
         // P2.left = vectoP3P4.y + P1.top;
         this.Remove();
-        this.Draw({scaleFactor:globalScaleValue});
+        this.Draw({
+            scaleFactor: globalScaleValue
+        });
     };
-    Shape.prototype.CaculateIntersection = function(f1,f2){
-        var d = f1.a*f2.b-f2.a*f1.b;
-        var dx = f1.c*f2.b-f2.c*f1.b;
-        var dy = f1.a*f2.c-f2.a*f1.c;
+    Shape.prototype.CaculateIntersection = function (f1, f2) {
+        var d = f1.a * f2.b - f2.a * f1.b;
+        var dx = f1.c * f2.b - f2.c * f1.b;
+        var dy = f1.a * f2.c - f2.a * f1.c;
         var x0 = 0;
         var y0 = 0;
-        if(d){
-            x0 = dx/d * -1;
-            y0 = dy/d* -1;
+        if (d) {
+            x0 = dx / d * -1;
+            y0 = dy / d * -1;
         }
-        return{
-            x:x0,y:y0
+        return {
+            x: x0,
+            y: y0
         }
     }
     Shape.prototype.Extract = function (p1, p2) { //xay dung phuong trinh duong thang ax+by+c=0
@@ -2337,8 +2549,8 @@ var Shape = /** @class */ (function () {
         //     c:c
         // }
         var u = {
-            x:p2.left - p1.left,
-            y:p2.top - p1.top
+            x: p2.left - p1.left,
+            y: p2.top - p1.top
         };
         var a = u.y;
         var b = -u.x;

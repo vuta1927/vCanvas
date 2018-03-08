@@ -1,6 +1,8 @@
 types = {
     Rect: 100,
     CalibRect: 101,
+    TwoAreaRectH: 102,
+    TwoAreaRectV: 103,
     Line: 200,
     HLine: 201,
     VLine: 202,
@@ -24,7 +26,9 @@ colors = {
     Line: '#00ff00',
     VerticalLine: '#0066ff',
     HorizontalLine: '#ffff00',
-    Text: '#23EAEA'
+    Text: '#23EAEA',
+    TwoAreaRectH: '#ccff00',
+    TwoAreaRectV: '#00ff7f'
 };
 (function () {
     function Create(params) {
@@ -58,7 +62,8 @@ colors = {
         canvasCollection.push(newCanvas);
         return newCanvas;
     }
-    function Add(json){
+
+    function Add(json) {
         var Raw = JSON.parse(json);
         var parentId = Raw.parent;
         var backgroundUrl = Raw.backgroundUrl;
@@ -82,6 +87,7 @@ colors = {
         canvasCollection.push(newCanvas);
         return newCanvas;
     }
+
     function GenerateId() {
         var index = 0;
         canvasCollection.forEach(function (obj) {
@@ -172,6 +178,8 @@ var vcanvas = /** @class */ (function () {
         this.modalErrorId = this.id + '-modalError';
         this.btnChangeBackgroundSaveId = this.id + '-btnChangeBackgroundSave';
         this.btnAddRectId = this.id + '-btnAddRect';
+        this.btnAddTwoAreaRectHId = this.id + '-btnAddTwoAreaRectH';
+        this.btnAddTwoAreaRectVId = this.id + '-btnAddTwoAreaRectV';
         this.btnAddText = this.id + '-btnAddText';
         this.btnAddVerticalLineId = this.id + '-btnAddVerticalLine';
         this.btnAddHorizontalLineId = this.id + '-btnAddHorizontalLine';
@@ -216,9 +224,9 @@ var vcanvas = /** @class */ (function () {
         if (json || this.fromApi) {
             this.shapes = [];
             var RawData = {};
-            if(!this.fromApi) RawData = JSON.parse(json);
+            if (!this.fromApi) RawData = JSON.parse(json);
             else RawData.shapes = this.RawShapeData;
-            if(!this.fromApi){
+            if (!this.fromApi) {
                 this.types = RawData.types;
                 this.backgroundUrl = RawData.backgroundUrl ? RawData.backgroundUrl : '';
                 this.extColumns = RawData.extColumns;
@@ -226,10 +234,10 @@ var vcanvas = /** @class */ (function () {
                 ExtendOtions = RawData.extColumns;
                 if (!this.randomColor)
                     this.randomColor = RawData.randomColor;
-            }else{
+            } else {
                 ExtendOtions = this.extColumns;
             }
-            
+
             this.htmlRender();
             if (!this.canvas) {
                 this.canvas = new fabric.Canvas(this.id + '-canvas', {
@@ -265,7 +273,7 @@ var vcanvas = /** @class */ (function () {
                             type: s.type,
                             canvas: mother.canvas
                         });
-                        if(s.type == types.Text){
+                        if (s.type == types.Text) {
                             newShape.lbX = GetValueFromPercent(s.left, globalImageWidth);
                             newShape.lbY = GetValueFromPercent(s.top, globalImageHeight);
                         }
@@ -276,7 +284,7 @@ var vcanvas = /** @class */ (function () {
                             if (newShape.type == types.HLine) newShape.color = colors.HorizontalLine;
                             if (newShape.type == types.Text) newShape.color = colors.Text;
                         }
-                        if(s.type != types.Text){
+                        if (s.type != types.Text) {
                             for (var j = 0; j < s.points.length; j++) {
                                 var p = s.points[j];
                                 var newPoint = new Point({
@@ -307,11 +315,11 @@ var vcanvas = /** @class */ (function () {
                                 newShape.points.push(newPoint);
                             }
                         }
-                        for(var k=0; k < mother.extColumns.length; k++){
+                        for (var k = 0; k < mother.extColumns.length; k++) {
                             var name = mother.extColumns[k].name;
-                            newShape[name] = s[name]? s[name]:null;
+                            newShape[name] = s[name] ? s[name] : null;
                         }
-                        
+
                         newShape.readOnly = s.readOnly;
                         newShape.viewOnly = s.viewOnly;
                         mother.shapes.push(newShape);
@@ -320,7 +328,7 @@ var vcanvas = /** @class */ (function () {
                     mother.background = bgr;
 
                     mother.initEvent();
-                    mother.shapes.forEach(function(s){
+                    mother.shapes.forEach(function (s) {
                         s.Draw();
                     })
                     mother.loadDataToTable();
@@ -392,6 +400,41 @@ var vcanvas = /** @class */ (function () {
                     type: types.Rect
                 });
             });
+
+            $('#' + mother.btnAddTwoAreaRectHId).click(function () {
+                url = mother.backgroundUrl;
+                if (!url) {
+                    $('#' + mother.bgModalId).modal('show');
+                    $('#' + mother.modalErrorId).text("");
+                    $('#' + mother.modalErrorId).text("There are no image yet. Please enter your image url to add image!");
+                    return;
+                }
+                if (mother.shapes.length == mother.maxShape && mother.maxShape > 0) {
+                    alert("You have reach to the limit of shapes, please change the max size value for drawing more!");
+                    return;
+                }
+                mother.Add({
+                    type: types.TwoAreaRectH
+                });
+            });
+
+            $('#' + mother.btnAddTwoAreaRectVId).click(function () {
+                url = mother.backgroundUrl;
+                if (!url) {
+                    $('#' + mother.bgModalId).modal('show');
+                    $('#' + mother.modalErrorId).text("");
+                    $('#' + mother.modalErrorId).text("There are no image yet. Please enter your image url to add image!");
+                    return;
+                }
+                if (mother.shapes.length == mother.maxShape && mother.maxShape > 0) {
+                    alert("You have reach to the limit of shapes, please change the max size value for drawing more!");
+                    return;
+                }
+                mother.Add({
+                    type: types.TwoAreaRectV
+                });
+            });
+
             $('#' + mother.btnAddText).click(function () {
                 url = mother.backgroundUrl;
                 if (!url) {
@@ -742,7 +785,7 @@ var vcanvas = /** @class */ (function () {
                 var scaleValue = p.scaleX;
                 var pointer = c.getPointer(e.e);
                 var allObject = c.getObjects();
-                
+
                 if (p.name.split('-')[0] == "i" || p.name.split('-')[0] == 'lb') {
                     for (var i = 0; i < mother.shapes.length; i++) {
                         if (p.parentName == mother.shapes[i].name) {
@@ -778,6 +821,8 @@ var vcanvas = /** @class */ (function () {
                             mother.ActiveObject.isMoving = true;
                             mother.shapes[i].Move({
                                 point: p,
+                                offsetX: e.e.movementX,
+                                offsetY: e.e.movementY,
                                 scaleFactor: scaleValue,
                                 strokeWidth: globalStrokeWidth
                             });
@@ -811,8 +856,9 @@ var vcanvas = /** @class */ (function () {
                     </div>
                     <div class="col-sm-9 col-xs-12 canvas-div">
                         <div class="col-md-12 col-xs-12 canvas-div">
-                            ${this.types.map(t => `
-                            ${(t == types.Rect) ? `<button type="button" class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>` : ``}
+                            ${this.types.map(t => `${(t == types.Rect) ? `<button type="button" class="btn btn-sm btn-primary" id="${this.btnAddRectId}" ><i class="fa fa-plus"></i> Add Rect</button>` : ``}
+                            ${(t == types.TwoAreaRectH)? `<button type="button" class="btn btn-sm btn-primary" id="${this.btnAddTwoAreaRectHId}"><i class="fa fa-plus"></i> Add Two Area Rect with horizontal line</button>`:``}
+                            ${(t == types.TwoAreaRectH)? `<button type="button" class="btn btn-sm btn-primary" id="${this.btnAddTwoAreaRectVId}"><i class="fa fa-plus"></i> Add Two Area Rect with vertical line</button>`:``}
                             ${(t == types.Text) ? `<button type="button" class="btn btn-sm btn-Default" id="${this.btnAddText}" ><i class="fa fa-plus"></i> Add Text</button>` : ``}
                             ${(t == types.VLine || t == types.Line) ? `<button type="button" class="btn btn-sm btn-success" id="${this.btnAddVerticalLineId}"><i class="fa fa-arrows-v"></i> Add vertical line</button>` : ``}
                             ${(t == types.HLine || t == types.Line) ? `<button type="button" class="btn btn-sm btn-success" id="${this.btnAddHorizontalLineId}"><i class="fa fa-arrows-h"></i> Add horizontal line</button>` : ``}
@@ -1204,10 +1250,10 @@ var vcanvas = /** @class */ (function () {
         }).remove();
         $('#' + this.tableId + ' tr:last').after(context);
         mother.shapes.forEach(function (s) {
-            $(`#${mother.id + '-' + s.name + '-readonly'}`).change(function(){
-                if(this.checked){
+            $(`#${mother.id + '-' + s.name + '-readonly'}`).change(function () {
+                if (this.checked) {
                     s.readOnly = true;
-                }else{
+                } else {
                     s.readOnly = false;
                 }
                 s.Remove();
@@ -1223,15 +1269,15 @@ var vcanvas = /** @class */ (function () {
                 return mother.ValidateKey()
             });
             $('#' + mother.id + '-' + s.name + '-input-' + s.name).change(function () {
-                if(!s.readOnly)
+                if (!s.readOnly)
                     mother.textChange(mother.id + '-' + s.name + '-input-' + s.name);
             });
             $('#' + mother.id + '-' + s.name + '-switch-' + s.name).change(function () {
-                if(!s.readOnly)
+                if (!s.readOnly)
                     mother.onChangeAddPoint(s, mother.id + '-' + s.name + '-switch-' + s.name);
             });
             $(`#${mother.id + '-' + s.name + '-calibRect-' + s.name}`).click(function () {
-                if(!s.readOnly)
+                if (!s.readOnly)
                     s.CalibRect();
             });
             $('#' + mother.id + '-' + s.name + '-spanRemoveShape-' + s.name).click(function () {
@@ -1271,30 +1317,29 @@ var vcanvas = /** @class */ (function () {
                 mother.extColumns.forEach(function (c) {
                     $('#' + mother.id + '-' + s.name + '-number-' + c.name).spinner({
                         change: function () {
-                            if(!s.viewOnly){
+                            if (!s.viewOnly) {
                                 var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
-                                if(s[c.name]) s[c.name] = element.value;
+
+                                s[c.name] = element.value;
+
                                 s.Remove();
                                 s.Draw({
                                     scaleFactor: globalScaleValue,
                                     strokeWidth: globalStrokeWidth
                                 });
                                 mother.triggerHandler('CanvasModified', {
-                                    event: c.name + " change",
+                                    event: c.name + " spinned",
                                     source: mother
-                                });
-                                s.Remove();
-                                s.Draw({
-                                    scaleFactor: globalScaleValue,
-                                    strokeWidth: globalStrokeWidth
                                 });
                             }
                         }
                     });
                     $(`#${mother.id + '-' + s.name + '-number-' + c.name}`).change(function () {
-                        if(!s.viewOnly){
+                        if (!s.viewOnly) {
                             var element = document.getElementById(mother.id + '-' + s.name + '-number-' + c.name);
-                            if(s[c.name]) s[c.name] = element.value;
+
+                            s[c.name] = element.value;
+
                             s.Remove();
                             s.Draw({
                                 scaleFactor: globalScaleValue,
@@ -1312,20 +1357,28 @@ var vcanvas = /** @class */ (function () {
                         }
                     });
                     if (c.type == typeColumns.Combobox) {
-                        if(!s.viewOnly){
+                        if (!s.viewOnly) {
                             var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
-                            if(s[c.name]) s[c.name] = element.value;
+
+                            s[c.name] = element.value;
+
                             s.Remove();
                             s.Draw({
                                 scaleFactor: globalScaleValue,
                                 strokeWidth: globalStrokeWidth
                             });
                         }
+                        mother.triggerHandler('CanvasModified', {
+                            event: c.name + " checked",
+                            source: mother
+                        });
                     }
                     $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
-                        if(!s.viewOnly){
+                        if (!s.viewOnly) {
                             var element = document.getElementById(mother.id + '-' + s.name + '-select-' + c.name);
-                            if(s[c.name]) s[c.name] = element.value;
+
+                            s[c.name] = element.value;
+
                             s.Remove();
                             s.Draw({
                                 scaleFactor: globalScaleValue,
@@ -1338,25 +1391,40 @@ var vcanvas = /** @class */ (function () {
                         }
                     });
                     $(`#${mother.id + '-' + s.name + '-input-' + c.name}`).change(function () {
-                        if(!s.viewOnly){
-                        var element = document.getElementById(mother.id + '-' + s.name + '-input-' + c.name);
-                        s[c.name] = element.value;
-                        s.Remove();
-                        s.Draw({
-                            scaleFactor: globalScaleValue,
-                            strokeWidth: globalStrokeWidth
-                        });
-                        mother.triggerHandler('CanvasModified', {
-                            event: c.name + " change",
-                            source: mother
-                        });
-                        s.Remove();
-                        s.Draw({
-                            scaleFactor: globalScaleValue,
-                            strokeWidth: globalStrokeWidth
-                        });
-                    }
+                        if (!s.viewOnly) {
+                            var element = document.getElementById(mother.id + '-' + s.name + '-input-' + c.name);
+                            s[c.name] = element.value;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " change",
+                                source: mother
+                            });
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
+                        }
                     });
+                    $(`#${mother.id + '-' + s.name + '-checkbox-' + c.name}`).click(function () {
+                        if (!s.viewOnly) {
+                            var element = document.getElementById(mother.id + '-' + s.name + '-checkbox-' + c.name);
+                            s[c.name] = element.checked;
+                            s.Remove();
+                            s.Draw({
+                                scaleFactor: globalScaleValue,
+                                strokeWidth: globalStrokeWidth
+                            });
+                            mother.triggerHandler('CanvasModified', {
+                                event: c.name + " checked",
+                                source: mother
+                            });
+                        }
+                    })
                 });
             }
         });
@@ -1507,11 +1575,11 @@ var vcanvas = /** @class */ (function () {
             ShapeExportObj.points = [];
             ShapeExportObj.readOnly = shape.readOnly;
             ShapeExportObj.viewOnly = shape.viewOnly;
-            if(shape.type == types.Text){
-                var obj = mother.canvas.getItem(shape.name,null);
+            if (shape.type == types.Text) {
+                var obj = mother.canvas.getItem(shape.name, null);
                 var bound = obj.getBoundingRect();
-                ShapeExportObj.left = parseFloat(shape.lbX/image.width).toFixed(2);
-                ShapeExportObj.top = parseFloat((shape.lbY+bound.height)/image.height).toFixed(2);
+                ShapeExportObj.left = parseFloat(shape.lbX / image.width).toFixed(2);
+                ShapeExportObj.top = parseFloat((shape.lbY + bound.height) / image.height).toFixed(2);
             }
             shape.points.forEach(function (point) {
                 ShapeExportObj.points.push({
@@ -1553,6 +1621,10 @@ var vcanvas = /** @class */ (function () {
             newShape.HorizontalLine();
         } else if (type == types.Text) {
             newShape.Text();
+        } else if (type == types.TwoAreaRectH) {
+            newShape.TwoAreaRectHorizontal();
+        } else if (type == types.TwoAreaRectV) {
+            newShape.TwoAreaRectVertical();
         }
         if (!this.randomColor) {
             if (type == types.Rect) newShape.color = colors.Rect;
@@ -1560,6 +1632,8 @@ var vcanvas = /** @class */ (function () {
             if (type == types.HLine) newShape.color = colors.HorizontalLine;
             if (type == types.Line) newShape.color = colors.Line;
             if (type == types.Text) newShape.color = colors.Text;
+            if (type == types.TwoAreaRectH) newShape.color = colors.TwoAreaRectH;
+            if (type == types.TwoAreaRectV) newShape.color = colors.TwoAreaRectV;
         }
         newShape.Draw({
             scaleFactor: globalScaleValue,
@@ -1605,8 +1679,12 @@ var vcanvas = /** @class */ (function () {
                 name = "HLine-" + i;
             else if (type === types.Text)
                 name = "Text-" + i;
-            else
+            else if (type == types.Rect)
                 name = "Rect-" + i;
+            else if (type == types.TwoAreaRectV)
+                name = "VRect-" + i;
+            else if (type == types.TwoAreaRectH)
+                name = "HRect-" + i;
             if (lstName.indexOf(name) == -1) {
                 isExsit = false;
             } else {
@@ -1749,8 +1827,12 @@ var Point = /** @class */ (function () {
             lockMovementY: false,
             canvas: null,
             readOnly: false,
-            viewOnly: false
-
+            viewOnly: false,
+            middlePoint: false,
+            middleStartPoint: null,
+            middleEndPoint: null,
+            XRatio: null, //ty le cua diem nam giua so vs canh tren truc OX
+            YRatio: null //ty le cua diem nam giua so vs canh tren truc OY
         }, params);
         this.index = properties.index;
         this.name = properties.name;
@@ -1764,6 +1846,11 @@ var Point = /** @class */ (function () {
         this.canvas = properties.canvas;
         this.readOnly = properties.readOnly;
         this.viewOnly = properties.viewOnly;
+        this.middlePoint = properties.middlePoint;
+        this.XRatio = properties.XRatio;
+        this.YRatio = properties.YRatio;
+        this.middleStartPoint = properties.middleStartPoint;
+        this.middleEndPoint = properties.middleEndPoint;
     }
     Point.prototype.Draw = function (params) {
         var options = $.extend({
@@ -1785,8 +1872,14 @@ var Point = /** @class */ (function () {
             stroke: "black",
             name: this.name,
             parentName: this.parentName,
+            XRatio: this.XRatio,
+            YRatio: this.YRatio,
+            middleRatio: this.middleRatio,
             hoverCursor: "pointer",
-            selectable: !this.readOnly
+            selectable: !this.readOnly,
+            middlePoint: this.middlePoint,
+            middleEndPoint: this.middleEndPoint,
+            middleStartPoint: this.middleStartPoint
         });
         if (scaleFactor) {
             p.scaleX = scaleFactor;
@@ -1813,6 +1906,7 @@ var Shape = /** @class */ (function () {
             name: null,
             type: types.Rect,
             points: [],
+            middlePoints: [],
             color: '#' + getRandomColor(),
             isMoving: false,
             lbX: 0,
@@ -1830,6 +1924,7 @@ var Shape = /** @class */ (function () {
         this.canvas = properties.canvas;
         this.readOnly = properties.readOnly;
         this.viewOnly = properties.viewOnly;
+        this.middlePoints = properties.middlePoints;
     };
     Shape.prototype.DrawLabel = function (params) {
         var options = $.extend({
@@ -1926,6 +2021,197 @@ var Shape = /** @class */ (function () {
         });
         this.points = [p1, p2, p3, p4];
     }
+
+    Shape.prototype.TwoAreaRectHorizontal = function () {
+        this.type = types.TwoAreaRectH;
+        var p1 = new Point({
+            index: 0,
+            name: "P-1",
+            parentName: this.name,
+            left: GetValueFromPercent(0.1, globalImageWidth), //175
+            top: GetValueFromPercent(0.1, globalImageHeight), //175
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+        var p2 = new Point({
+            index: 1,
+            name: "P-2",
+            parentName: this.name,
+            left: GetValueFromPercent(0.15, globalImageWidth), //350
+            top: GetValueFromPercent(0.10, globalImageHeight), //175
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+        var p3 = new Point({
+            index: 2,
+            name: "P-3",
+            parentName: this.name,
+            left: GetValueFromPercent(0.15, globalImageWidth), //350
+            top: GetValueFromPercent(0.20, globalImageHeight), //300
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+        var p4 = new Point({
+            index: 3,
+            name: "P-4",
+            parentName: this.name,
+            left: GetValueFromPercent(0.10, globalImageWidth),
+            top: GetValueFromPercent(0.20, globalImageHeight),
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+
+        var middlePoint1 = new Point({
+            index: 4,
+            name: "MP-1",
+            parentName: this.name,
+            left: (p1.left + p4.left) / 2,
+            top: (p1.top + p4.top) / 2,
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly,
+            middlePoint: true,
+            XRatio: (p4.left - p1.left) == 0 ? 1 : Math.abs(((p1.left + p4.left) / 2) - p1.left) / Math.abs(p4.left - p1.left),
+            YRatio: (p4.top - p1.top) == 0 ? 1 : Math.abs(((p1.top + p4.top) / 2) - p1.top) / Math.abs(p4.top - p1.top),
+        });
+
+        middlePoint1.middleStartPoint = p1;
+        middlePoint1.middleEndPoint = p4;
+
+        var middlePoint2 = new Point({
+            index: 5,
+            name: "MP-2",
+            parentName: this.name,
+            left: (p2.left + p3.left) / 2,
+            top: (p2.top + p3.top) / 2,
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly,
+            middlePoint: true,
+            XRatio: (p3.left - p2.left) == 0 ? 1 : Math.abs(((p2.left + p3.left) / 2) - p2.left) / Math.abs(p3.left - p2.left),
+            YRatio: (p3.top - p2.top) == 0 ? 1 : Math.abs(((p2.top + p3.top) / 2) - p2.top) / Math.abs(p3.top - p2.top),
+            middleStartPoint: p2,
+            middleEndPoint: p3
+        });
+
+        middlePoint2.middleStartPoint = p2;
+        middlePoint2.middleEndPoint = p3;
+
+        this.middlePoints = [middlePoint1, middlePoint2];
+        this.points = [p1, p2, p3, p4];
+    }
+
+    Shape.prototype.TwoAreaRectVertical = function () {
+        this.type = types.TwoAreaRectV;
+        var p1 = new Point({
+            index: 0,
+            name: "P-1",
+            parentName: this.name,
+            left: GetValueFromPercent(0.1, globalImageWidth), //175
+            top: GetValueFromPercent(0.1, globalImageHeight), //175
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+        var p2 = new Point({
+            index: 1,
+            name: "P-2",
+            parentName: this.name,
+            left: GetValueFromPercent(0.15, globalImageWidth), //350
+            top: GetValueFromPercent(0.10, globalImageHeight), //175
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+        var p3 = new Point({
+            index: 2,
+            name: "P-3",
+            parentName: this.name,
+            left: GetValueFromPercent(0.15, globalImageWidth), //350
+            top: GetValueFromPercent(0.20, globalImageHeight), //300
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+        var p4 = new Point({
+            index: 3,
+            name: "P-4",
+            parentName: this.name,
+            left: GetValueFromPercent(0.10, globalImageWidth),
+            top: GetValueFromPercent(0.20, globalImageHeight),
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly
+        });
+
+        var middlePoint1 = new Point({
+            index: 4,
+            name: "MP-1",
+            parentName: this.name,
+            left: (p1.left + p2.left) / 2,
+            top: (p1.top + p2.top) / 2,
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly,
+            middlePoint: true,
+            XRatio: (p2.left - p1.left) == 0 ? 1 : Math.abs(((p1.left + p2.left) / 2) - p1.left) / Math.abs(p2.left - p1.left),
+            YRatio: (p2.top - p1.top) == 0 ? 1 : Math.abs(((p1.top + p2.top) / 2) - p1.left) / Math.abs(p2.top - p1.top),
+            middleStartPoint: p1,
+            middleEndPoint: p2
+        });
+        middlePoint1.middleStartPoint = p1;
+        middlePoint1.middleEndPoint = p2;
+
+        var middlePoint2 = new Point({
+            index: 5,
+            name: "MP-2",
+            parentName: this.name,
+            left: (p3.left + p4.left) / 2,
+            top: (p3.top + p4.top) / 2,
+            fill: this.color,
+            stroke: this.color,
+            canvas: this.canvas,
+            readOnly: this.readOnly,
+            viewOnly: this.viewOnly,
+            middlePoint: true,
+            XRatio: (p4.left - p3.left) == 0 ? 1 : Math.abs(((p3.left + p4.left) / 2) - p3.left) / Math.abs(p4.left - p3.left),
+            YRatio: (p4.top - p3.top) == 0 ? 1 : Math.abs(((p3.top + p4.top) / 2) - p3.top) / Math.abs(p4.top - p3.top),
+            middleStartPoint: p3,
+            middleEndPoint: p4
+        });
+        middlePoint2.middleStartPoint = p3;
+        middlePoint2.middleEndPoint = p4;
+
+        this.middlePoints = [middlePoint1, middlePoint2];
+        this.points = [p1, p2, p3, p4];
+    }
+
     Shape.prototype.VerticalLine = function () {
         this.type = types.VLine,
             this.points = [
@@ -2070,6 +2356,7 @@ var Shape = /** @class */ (function () {
             } else {
                 for (var i = 0; i < this.points.length; i++) {
                     var line;
+
                     if (i !== (this.points.length - 1)) {
                         line = new fabric.Line([
                             this.points[i].left,
@@ -2112,7 +2399,7 @@ var Shape = /** @class */ (function () {
                     dlines[line.name] = line;
                     this.canvas.add(line);
                 }
-
+                this.FillInside();
                 var arrLine = [];
                 Object.keys(dlines).forEach(function (key) {
                     var value = dlines[key].name;
@@ -2120,7 +2407,7 @@ var Shape = /** @class */ (function () {
                 });
                 this.lines = arrLine;
             }
-            this.FillInside();
+
             for (var i = 0; i < this.points.length; i++) {
                 this.points[i].hoverCursor = this.hoverCursor;
                 this.points[i].fill = this.color;
@@ -2129,6 +2416,42 @@ var Shape = /** @class */ (function () {
                     scaleFactor: scaleFactor,
                     readOnly: this.readOnly,
                     viewOnly: this.viewOnly
+                });
+            }
+            if (this.middlePoints.length > 0) {
+                line = new fabric.Line([
+                    this.middlePoints[0].left,
+                    this.middlePoints[0].top,
+                    this.middlePoints[1].left,
+                    this.middlePoints[1].top
+                ], {
+                    name: "Mline",
+                    parentName: this.name,
+                    fill: this.color,
+                    stroke: this.color,
+                    selectable: false,
+                    hasControls: false,
+                    hasBorders: false,
+                    hasRotatingPoint: false,
+                    hoverCursor: this.hoverCursor,
+                    perPixelTargetFind: true
+                });
+                if (globalStrokeWidth) {
+                    line.strokeWidth = globalStrokeWidth;
+                } else {
+                    line.strokeWidth = 3;
+                }
+                dlines[line.name] = line;
+                this.canvas.add(line);
+                this.middlePoints.forEach(middlePoint => {
+                    middlePoint.hoverCursor = this.hoverCursor;
+                    middlePoint.fill = this.color;
+                    middlePoint.Draw({
+                        canvas: this.canvas,
+                        scaleFactor: scaleFactor,
+                        readOnly: this.readOnly,
+                        viewOnly: this.viewOnly
+                    });
                 });
             }
         } else {
@@ -2160,15 +2483,89 @@ var Shape = /** @class */ (function () {
         if (this.type != types.Text) {
             this.Remove();
             if (point) {
-                for (var i = 0; i < this.points.length; i++) {
-                    if (point.name === this.points[i].name) {
-                        this.points[i].left = point.left;
-                        this.points[i].top = point.top;
-                        break;
+                if (point.middlePoint) {
+                    if (this.type == types.TwoAreaRectH) {
+                        if (point.name == 'MP-1') {
+                            var result = this.checkLineIntersection(this.middlePoints[1].left, this.middlePoints[1].top, point.left, point.top, this.points[0].left, this.points[0].top, this.points[3].left, this.points[3].top);
+                            if (result.onLine1 && result.onLine2) {
+                                var result2 = this.checkLineIntersection(result.x, result.y, this.middlePoints[1].left, result.y, this.points[1].left, this.points[1].top, this.points[2].left, this.points[2].top);
+                                if (result2.onLine2) {
+                                    this.middlePoints[1].left = result2.x;
+                                    this.middlePoints[1].top = result.y;
+
+                                    this.middlePoints[0].left = result.x;
+                                    this.middlePoints[0].top = result.y;
+                                }
+                            }
+
+                        } else if (point.name == 'MP-2') {
+                            var result = this.checkLineIntersection(this.middlePoints[0].left, this.middlePoints[0].top, point.left, point.top, this.points[1].left, this.points[1].top, this.points[2].left, this.points[2].top);
+                            if (result.onLine1 && result.onLine2) {
+                                this.middlePoints[1].left = result.x;
+                                this.middlePoints[1].top = result.y;
+                     
+                                this.middlePoints[0].top = result.y;
+                                var result2 = this.checkLineIntersection(this.middlePoints[0].left, this.middlePoints[0].top, this.middlePoints[1].left, result.y, this.points[0].left, this.points[0].top, this.points[3].left, this.points[3].top);
+                                if (result2.onLine2) {
+                                    this.middlePoints[0].left = result2.x;
+                                }
+                            }
+                        }
+
+                    } else if (this.type == types.TwoAreaRectV) {
+                        if (point.name == 'MP-1') {
+                            var result = this.checkLineIntersection(this.middlePoints[1].left, this.middlePoints[1].top, point.left, point.top, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
+
+                            if (result.onLine1 && result.onLine2) {
+                                var result2 = this.checkLineIntersection(result.x, result.y, result.x, this.middlePoints[1].top,this.points[2].left, this.points[2].top, this.points[1].left, this.points[1].top);
+                                if(result2.onLine2){
+                                    this.middlePoints[0].left = result.x;
+                                    this.middlePoints[0].top = result.y;
+
+                                    this.middlePoints[1].left = result2.x;
+                                    this.middlePoints[1].top = result.y;
+                                }
+                            }
+                        } else if (point.name == 'MP-2') {
+                            var result = this.checkLineIntersection(this.middlePoints[0].left, this.middlePoints[0].top, point.left, point.top, this.points[3].left, this.points[3].top, this.points[2].left, this.points[2].top);
+
+                            if (result.onLine1 && result.onLine2) {
+                                var result2 = this.checkLineIntersection(result.x, result.y, result.x, this.middlePoints[1].top, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
+                                if(result2.onLine2){
+                                    this.middlePoints[1].left = result.x;
+                                    this.middlePoints[1].top = result.y;
+
+                                    this.middlePoints[0].left = result.x;
+                                    this.middlePoints[0].top = result2.y;
+                                }
+                            }
+                        }
                     }
+                } else {
+                    var originPoint = {left: 0, top: 0};
+                    for (var i = 0; i < this.points.length; i++) {
+                        if (point.name === this.points[i].name) {
+                            originPoint.left = this.points[i].left;
+                            originPoint.top = this.points[i].top;
+                            this.points[i].left = point.left;
+                            this.points[i].top = point.top;
+                            break;
+                        }
+                    }
+                    var result = this.CaculateMiddlePoints();
+                    if(!result){
+                        for (var i = 0; i < this.points.length; i++) {
+                            if (point.name === this.points[i].name) {
+                                this.points[i].left = originPoint.left;
+                                this.points[i].top = originPoint.top;
+                                break;
+                            }
+                        }
+                    }
+                    this.lbX = this.points[0].left + 5;
+                    this.lbY = this.points[0].top - 30;
+
                 }
-                this.lbX = this.points[0].left + 5;
-                this.lbY = this.points[0].top - 30;
             } else {
                 this.GetNewCoodr(offsetX, offsetY);
             }
@@ -2176,7 +2573,7 @@ var Shape = /** @class */ (function () {
                 scaleFactor: scaleFactor,
                 strokeWidth: strokeWidth
             });
-        }else{
+        } else {
             this.lbX = offsetX;
             this.lbY = offsetY;
             this.Remove();
@@ -2186,6 +2583,54 @@ var Shape = /** @class */ (function () {
             });
         }
     }
+
+    Shape.prototype.CaculateMiddlePoints = function () {
+        var MiddleLine = [];
+        MiddleLine.push({
+            x: this.middlePoints[0].left,
+            y: this.middlePoints[0].top
+        }, {
+            x: this.middlePoints[1].left,
+            y: this.middlePoints[1].top
+        });
+        if (this.type == types.TwoAreaRectH) {
+            var result1 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[0].left, this.points[0].top, this.points[3].left, this.points[3].top);
+            if(result1.onLine2){
+                this.middlePoints[0].left = result1.x;
+                this.middlePoints[0].top = result1.y;
+            }else{
+                return false;
+            }
+
+            var result2 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[1].left, this.points[1].top, this.points[2].left, this.points[2].top);
+            if(result2.onLine2){
+                this.middlePoints[1].left = result2.x;
+                this.middlePoints[1].top = result2.y;
+            }else{
+                return false;
+            }
+        }
+        if (this.type == types.TwoAreaRectV) {
+            var result1 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
+            if(result1.onLine2)
+            {this.middlePoints[0].left = result1.x;
+            this.middlePoints[0].top = result1.y;}
+            else{
+                return false;
+            }
+
+            var result2 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[2].left, this.points[2].top, this.points[3].left, this.points[3].top);
+            if(result2.onLine2)
+            {this.middlePoints[1].left = result2.x;
+            this.middlePoints[1].top = result2.y;}
+            else{
+                return false;
+            }
+        }
+        return true;
+
+    }
+
     Shape.prototype.FillInside = function () {
         var pathDirection = 'M';
         this.points.forEach(function (p) {
@@ -2496,6 +2941,44 @@ var Shape = /** @class */ (function () {
         t2 = (p1l1.left * a1 + p1l1.top * b1 + c1) * (p2l1.left * a1 + p2l1.top * b1 + c1);
         return (t1 < Number.EPSILON && t2 < Number.EPSILON) ? true : false;
     };
+    Shape.prototype.checkLineIntersection = function (line1StartX, line1StartY, line1EndX, line1EndY, line2StartX, line2StartY, line2EndX, line2EndY) {
+        // if the lines intersect, the result contains the x and y of the intersection (treating the lines as infinite) and booleans for whether line segment 1 or line segment 2 contain the point
+        var denominator, a, b, numerator1, numerator2, result = {
+            x: null,
+            y: null,
+            onLine1: false,
+            onLine2: false
+        };
+        denominator = ((line2EndY - line2StartY) * (line1EndX - line1StartX)) - ((line2EndX - line2StartX) * (line1EndY - line1StartY));
+        if (denominator == 0) {
+            return result;
+        }
+        a = line1StartY - line2StartY;
+        b = line1StartX - line2StartX;
+        numerator1 = ((line2EndX - line2StartX) * a) - ((line2EndY - line2StartY) * b);
+        numerator2 = ((line1EndX - line1StartX) * a) - ((line1EndY - line1StartY) * b);
+        a = numerator1 / denominator;
+        b = numerator2 / denominator;
+
+        // if we cast these lines infinitely in both directions, they intersect here:
+        result.x = line1StartX + (a * (line1EndX - line1StartX));
+        result.y = line1StartY + (a * (line1EndY - line1StartY));
+        /*
+                // it is worth noting that this should be the same as:
+                x = line2StartX + (b * (line2EndX - line2StartX));
+                y = line2StartX + (b * (line2EndY - line2StartY));
+                */
+        // if line1 is a segment and line2 is infinite, they intersect if:
+        if (a > 0 && a < 1) {
+            result.onLine1 = true;
+        }
+        // if line2 is a segment and line1 is infinite, they intersect if:
+        if (b > 0 && b < 1) {
+            result.onLine2 = true;
+        }
+        // if line1 and line2 are segments, they intersect if both of the above are true
+        return result;
+    };
     Shape.prototype.GetPoint = function (name) {
         for (var i = 0; i < this.points.length; i++) {
             if (this.points[i].name == name) {
@@ -2565,6 +3048,10 @@ var Shape = /** @class */ (function () {
         for (var i = 0; i < this.points.length; ++i) {
             this.points[i].left += a;
             this.points[i].top += b;
+        }
+        for (var j = 0; j < this.middlePoints.length; j++) {
+            this.middlePoints[j].left += a;
+            this.middlePoints[j].top += b;
         }
         this.lbX += a;
         this.lbY += b;

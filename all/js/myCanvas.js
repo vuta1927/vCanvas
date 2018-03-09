@@ -287,21 +287,6 @@ var vcanvas = /** @class */ (function () {
                             if (newShape.type == types.TwoAreaRectV) newShape.color = colors.TwoAreaRectV;
                         }
                         if (s.type != types.Text) {
-                            for (var k = 0; k < s.middlePoints.length; k++) {
-                                var p = s.middlePoints[k];
-                                var newPoint = new Point({
-                                    name: p.name,
-                                    parentName: s.name,
-                                    left: GetValueFromPercent(p.left, img.width),
-                                    top: GetValueFromPercent(p.top, img.height),
-                                    index: p.index,
-                                    middlePoint: true
-                                    // lockMovementX:(RawData.shapes[i].type === types.HLine)? false:true,
-                                    // lockMovementY:(RawData.shapes[i].type === types.VLine)? false: true
-                                });
-                                newShape.middlePoints.push(newPoint);
-                            }
-
                             for (var j = 0; j < s.points.length; j++) {
                                 var p = s.points[j];
                                 var newPoint = new Point({
@@ -309,7 +294,8 @@ var vcanvas = /** @class */ (function () {
                                     parentName: s.name,
                                     left: GetValueFromPercent(p.left, img.width),
                                     top: GetValueFromPercent(p.top, img.height),
-                                    index: p.index
+                                    index: p.index,
+                                    middlePoint: p.isMiddlePoint
                                     // lockMovementX:(RawData.shapes[i].type === types.HLine)? false:true,
                                     // lockMovementY:(RawData.shapes[i].type === types.VLine)? false: true
                                 });
@@ -323,6 +309,9 @@ var vcanvas = /** @class */ (function () {
                                     newPoint.lockMovementX = false;
                                     newPoint.lockMovementY = false;
                                 }
+                                if (p.isMiddlePoint){
+                                    newShape.middlePoints.push(newPoint);
+                                };
                                 if (RawData.extColumns) {
                                     for (var z = 0; z < RawData.extColumns.length; z++) {
                                         var column = RawData.extColumns[z];
@@ -331,12 +320,12 @@ var vcanvas = /** @class */ (function () {
                                 }
                                 newShape.points.push(newPoint);
                             }
+                            
                         }
                         for (var k = 0; k < mother.extColumns.length; k++) {
                             var name = mother.extColumns[k].name;
                             newShape[name] = s[name] ? s[name] : null;
                         }
-
                         newShape.readOnly = s.readOnly;
                         newShape.viewOnly = s.viewOnly;
                         mother.shapes.push(newShape);
@@ -1247,14 +1236,7 @@ var vcanvas = /** @class */ (function () {
                             <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
                         </tr>`).join('')}`
                 }
-                ${s.middlePoints.map(p=>`
-                    <tr id="${mother.id+'-'+s.name+'-tr-'+p.name}" class="text-center">
-                        <td hidden="true">${s.name}</td>
-                        <td>${p.name}</td>
-                        <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width) : parseFloat(p.left)}</td>
-                        <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height) : parseFloat(p.top)}</td>
-                    </tr>
-                `)}
+                
                 
                     </tbody>
                     </table>
@@ -1616,15 +1598,18 @@ var vcanvas = /** @class */ (function () {
                     index: point.index,
                     name: point.name,
                     left: point.left < 0 ? 0 : parseFloat(point.left / image.width),
-                    top: point.top < 0 ? 0 : parseFloat(point.top / image.height)
+                    top: point.top < 0 ? 0 : parseFloat(point.top / image.height),
+                    isMiddlePoint: point.middlePoint
                 });
             });
-            shape.middlePoints.forEach(function (point) {
+
+            shape.middlePoints.forEach(point => {
                 ShapeExportObj.middlePoints.push({
                     index: point.index,
                     name: point.name,
                     left: point.left < 0 ? 0 : parseFloat(point.left / image.width),
-                    top: point.top < 0 ? 0 : parseFloat(point.top / image.height)
+                    top: point.top < 0 ? 0 : parseFloat(point.top / image.height),
+                    isMiddlePoint: point.middlePoint
                 });
             });
             ExportObject.shapes.push(ShapeExportObj);
@@ -2080,6 +2065,7 @@ var Shape = /** @class */ (function () {
             readOnly: this.readOnly,
             viewOnly: this.viewOnly
         });
+
         var p2 = new Point({
             index: 1,
             name: "P-2",
@@ -2092,8 +2078,9 @@ var Shape = /** @class */ (function () {
             readOnly: this.readOnly,
             viewOnly: this.viewOnly
         });
+
         var p3 = new Point({
-            index: 2,
+            index: 3,
             name: "P-3",
             parentName: this.name,
             left: GetValueFromPercent(0.15, globalImageWidth), //350
@@ -2105,7 +2092,7 @@ var Shape = /** @class */ (function () {
             viewOnly: this.viewOnly
         });
         var p4 = new Point({
-            index: 3,
+            index: 4,
             name: "P-4",
             parentName: this.name,
             left: GetValueFromPercent(0.10, globalImageWidth),
@@ -2116,9 +2103,10 @@ var Shape = /** @class */ (function () {
             readOnly: this.readOnly,
             viewOnly: this.viewOnly
         });
+        
 
-        var middlePoint1 = new Point({
-            index: 4,
+        var middlePoint2 = new Point({
+            index: 5,
             name: "MP-1",
             parentName: this.name,
             left: (p1.left + p4.left) / 2,
@@ -2131,8 +2119,8 @@ var Shape = /** @class */ (function () {
             middlePoint: true
         });
 
-        var middlePoint2 = new Point({
-            index: 5,
+        var middlePoint1 = new Point({
+            index: 2,
             name: "MP-2",
             parentName: this.name,
             left: (p2.left + p3.left) / 2,
@@ -2146,7 +2134,7 @@ var Shape = /** @class */ (function () {
         });
 
         this.middlePoints = [middlePoint1, middlePoint2];
-        this.points = [p1, p2, p3, p4];
+        this.points = [p1, p2, middlePoint1, p3, p4, middlePoint2];
     }
 
     Shape.prototype.TwoAreaRectVertical = function () {
@@ -2163,8 +2151,9 @@ var Shape = /** @class */ (function () {
             readOnly: this.readOnly,
             viewOnly: this.viewOnly
         });
+
         var p2 = new Point({
-            index: 1,
+            index: 2,
             name: "P-2",
             parentName: this.name,
             left: GetValueFromPercent(0.15, globalImageWidth), //350
@@ -2176,7 +2165,7 @@ var Shape = /** @class */ (function () {
             viewOnly: this.viewOnly
         });
         var p3 = new Point({
-            index: 2,
+            index: 3,
             name: "P-3",
             parentName: this.name,
             left: GetValueFromPercent(0.15, globalImageWidth), //350
@@ -2187,8 +2176,9 @@ var Shape = /** @class */ (function () {
             readOnly: this.readOnly,
             viewOnly: this.viewOnly
         });
+
         var p4 = new Point({
-            index: 3,
+            index: 5,
             name: "P-4",
             parentName: this.name,
             left: GetValueFromPercent(0.10, globalImageWidth),
@@ -2201,7 +2191,7 @@ var Shape = /** @class */ (function () {
         });
 
         var middlePoint1 = new Point({
-            index: 4,
+            index: 1,
             name: "MP-1",
             parentName: this.name,
             left: (p1.left + p2.left) / 2,
@@ -2215,7 +2205,7 @@ var Shape = /** @class */ (function () {
         });
 
         var middlePoint2 = new Point({
-            index: 5,
+            index: 4,
             name: "MP-2",
             parentName: this.name,
             left: (p3.left + p4.left) / 2,
@@ -2227,9 +2217,8 @@ var Shape = /** @class */ (function () {
             viewOnly: this.viewOnly,
             middlePoint: true,
         });
-
         this.middlePoints = [middlePoint1, middlePoint2];
-        this.points = [p1, p2, p3, p4];
+        this.points = [p1, middlePoint1, p2, p3, middlePoint2, p4];
     }
 
     Shape.prototype.VerticalLine = function () {
@@ -2373,11 +2362,10 @@ var Shape = /** @class */ (function () {
                 this.lines = [line.name];
                 dlines[line.name] = line;
                 this.canvas.add(line);
-            } else {
+            } else if(this.type == types.Rect) {
                 for (var i = 0; i < this.points.length; i++) {
                     var line;
 
-                    this.FillInside();
                     if (i !== (this.points.length - 1)) {
                         line = new fabric.Line([
                             this.points[i].left,
@@ -2420,31 +2408,60 @@ var Shape = /** @class */ (function () {
                     dlines[line.name] = line;
                     this.canvas.add(line);
                 }
+                this.FillInside();
                 var arrLine = [];
                 Object.keys(dlines).forEach(function (key) {
                     var value = dlines[key].name;
                     arrLine.push(value);
                 });
                 this.lines = arrLine;
-            }
+            }else if (this.type == types.TwoAreaRectH || this.type == types.TwoAreaRectV){
+                for (var i = 0; i < this.points.length; i++) {
+                    var line;
+                    if (i !== (this.points.length - 1)) {
+                        line = new fabric.Line([
+                            this.points[i].left,
+                            this.points[i].top,
+                            this.points[i + 1].left,
+                            this.points[i + 1].top
+                        ], {
+                            name: "line" + i,
+                            parentName: this.name,
+                            fill: this.color,
+                            stroke: this.color,
+                            selectable: false,
+                            hasControls: false,
+                            hasBorders: false,
+                            hasRotatingPoint: false,
+                            hoverCursor: this.hoverCursor,
+                            perPixelTargetFind: true
+                        });
+                    } else {
+                        line = new fabric.Line([this.points[i].left, this.points[i].top,
+                            this.points[0].left, this.points[0].top
+                        ], {
+                            name: "line" + i,
+                            parentName: this.name,
+                            fill: this.color,
+                            stroke: this.color,
+                            selectable: false,
+                            hasControls: false,
+                            hasBorders: false,
+                            hasRotatingPoint: false,
+                            hoverCursor: this.hoverCursor,
+                            perPixelTargetFind: true
+                        });
+                    }
+                    if (globalStrokeWidth) {
+                        line.strokeWidth = globalStrokeWidth;
+                    } else {
+                        line.strokeWidth = 3;
+                    }
+                    dlines[line.name] = line;
+                    this.canvas.add(line);
+                }
 
-            for (var i = 0; i < this.points.length; i++) {
-                this.points[i].hoverCursor = this.hoverCursor;
-                this.points[i].fill = this.color;
-                this.points[i].Draw({
-                    canvas: this.canvas,
-                    scaleFactor: scaleFactor,
-                    readOnly: this.readOnly,
-                    viewOnly: this.viewOnly
-                });
-            }
-            if (this.middlePoints.length > 0) {
-                line = new fabric.Line([
-                    this.middlePoints[0].left,
-                    this.middlePoints[0].top,
-                    this.middlePoints[1].left,
-                    this.middlePoints[1].top
-                ], {
+                line = new fabric.Line([this.middlePoints[0].left, this.middlePoints[0].top, this.middlePoints[1].left, this.middlePoints[1].top], {
                     name: "Mline",
                     parentName: this.name,
                     fill: this.color,
@@ -2461,20 +2478,27 @@ var Shape = /** @class */ (function () {
                 } else {
                     line.strokeWidth = 3;
                 }
+                
                 dlines[line.name] = line;
                 this.canvas.add(line);
-                this.middlePoints.forEach(middlePoint => {
-                    middlePoint.hoverCursor = this.hoverCursor;
-                    middlePoint.fill = this.color;
-                    middlePoint.Draw({
-                        canvas: this.canvas,
-                        scaleFactor: scaleFactor,
-                        readOnly: this.readOnly,
-                        viewOnly: this.viewOnly
-                    });
+
+                this.FillInside();
+                var arrLine = [];
+                Object.keys(dlines).forEach(function (key) {
+                    var value = dlines[key].name;
+                    arrLine.push(value);
                 });
-            } else {
-                // this.FillInside();
+                this.lines = arrLine;
+            }
+            for (var i = 0; i < this.points.length; i++) {
+                this.points[i].hoverCursor = this.hoverCursor;
+                this.points[i].fill = this.color;
+                this.points[i].Draw({
+                    canvas: this.canvas,
+                    scaleFactor: scaleFactor,
+                    readOnly: this.readOnly,
+                    viewOnly: this.viewOnly
+                });
             }
         } else {
             this.DrawLabel({
@@ -2509,60 +2533,41 @@ var Shape = /** @class */ (function () {
             this.Remove();
             if (point) {
                 if (point.middlePoint) {
-                    if (this.type == types.TwoAreaRectH) {
-                        if (point.name == 'MP-1') {
-                            var result = this.checkLineIntersection(this.middlePoints[1].left, this.middlePoints[1].top, point.left, point.top, this.points[0].left, this.points[0].top, this.points[3].left, this.points[3].top);
-                            if (result.onLine1 && result.onLine2) {
-                                var result2 = this.checkLineIntersection(result.x, result.y, this.middlePoints[1].left, result.y, this.points[1].left, this.points[1].top, this.points[2].left, this.points[2].top);
-                                if (result2.onLine2) {
-                                    this.middlePoints[1].left = result2.x;
-                                    this.middlePoints[1].top = result.y;
+                    if (this.type == types.TwoAreaRectH) { // p1, p2, middlePoint1, p3, p4, middlePoint2
+                        if(this.points[0].top < point.top && point.top < this.points[4].top){
+                            if (point.name == 'MP-1') {
+                                if(point.top < this.points[3].top && point.top > this.points[1].top){
+                                    this.points[5].left = point.left;
+                                    this.points[5].top = point.top;
 
-                                    this.middlePoints[0].left = result.x;
-                                    this.middlePoints[0].top = result.y;
+                                    this.points[2].top = point.top;
                                 }
-                            }
+    
+                            } else if (point.name == 'MP-2') {
+                                if(point.top < this.points[4].top && point.top > this.points[0].top)
+                                this.points[2].left = point.left;
+                                this.points[2].top = point.top;
 
-                        } else if (point.name == 'MP-2') {
-                            var result = this.checkLineIntersection(this.middlePoints[0].left, this.middlePoints[0].top, point.left, point.top, this.points[1].left, this.points[1].top, this.points[2].left, this.points[2].top);
-                            if (result.onLine1 && result.onLine2) {
-                                this.middlePoints[1].left = result.x;
-                                this.middlePoints[1].top = result.y;
-
-                                this.middlePoints[0].top = result.y;
-                                var result2 = this.checkLineIntersection(this.middlePoints[0].left, this.middlePoints[0].top, this.middlePoints[1].left, result.y, this.points[0].left, this.points[0].top, this.points[3].left, this.points[3].top);
-                                if (result2.onLine2) {
-                                    this.middlePoints[0].left = result2.x;
-                                }
+                                this.points[5].top = point.top;
                             }
                         }
 
-                    } else if (this.type == types.TwoAreaRectV) {
-                        if (point.name == 'MP-1') {
-                            var result = this.checkLineIntersection(point.left, point.top, this.middlePoints[1].left, this.middlePoints[1].top, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
+                    } else if (this.type == types.TwoAreaRectV) {// p1, middlePoint1, p2, p3, middlePoint2, p4
+                        if(this.points[0].left < point.left && point.left < this.points[2].left){
+                            if(point.left > this.points[5].left && point.left < this.points[3].left){
 
-                            if (result.onLine1 && result.onLine2) {
-                                var result2 = this.checkLineIntersection(result.x, result.y, result.x, this.middlePoints[1].top, this.points[2].left, this.points[2].top, this.points[3].left, this.points[3].top);
-                                if (result2.onLine2) {
-                                    this.middlePoints[0].left = result.x;
-                                    this.middlePoints[0].top = result.y;
+                                if (point.name == 'MP-1') {
+                                    this.points[1].left = point.left;
+                                    this.points[1].top = point.top;
+                                    
+                                    this.points[4].left = point.left;
+                                } else if (point.name == 'MP-2') {
+                                    this.points[4].left = point.left;
+                                    this.points[4].top = point.top;
 
-                                    this.middlePoints[1].left = result.x;
-                                    this.middlePoints[1].top = result2.y;
+                                    this.points[1].left = point.left;
                                 }
-                            }
-                        } else if (point.name == 'MP-2') {
-                            var result = this.checkLineIntersection(this.middlePoints[0].left, this.middlePoints[0].top, point.left, point.top, this.points[3].left, this.points[3].top, this.points[2].left, this.points[2].top);
 
-                            if (result.onLine1 && result.onLine2) {
-                                var result2 = this.checkLineIntersection(result.x, result.y, result.x, this.middlePoints[1].top, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
-                                if (result2.onLine2) {
-                                    this.middlePoints[1].left = result.x;
-                                    this.middlePoints[1].top = result.y;
-
-                                    this.middlePoints[0].left = result.x;
-                                    this.middlePoints[0].top = result2.y;
-                                }
                             }
                         }
                     }
@@ -2578,18 +2583,6 @@ var Shape = /** @class */ (function () {
                             this.points[i].left = point.left;
                             this.points[i].top = point.top;
                             break;
-                        }
-                    }
-                    if (this.middlePoints.length > 0) {
-                        var result = this.CaculateMiddlePoints();
-                        if (!result) {
-                            for (var i = 0; i < this.points.length; i++) {
-                                if (point.name === this.points[i].name) {
-                                    this.points[i].left = originPoint.left;
-                                    this.points[i].top = originPoint.top;
-                                    break;
-                                }
-                            }
                         }
                     }
                     this.lbX = this.points[0].left + 5;
@@ -2614,51 +2607,28 @@ var Shape = /** @class */ (function () {
         }
     }
 
-    Shape.prototype.CaculateMiddlePoints = function () {
-        var MiddleLine = [];
-        MiddleLine.push({
-            x: this.middlePoints[0].left,
-            y: this.middlePoints[0].top
-        }, {
-            x: this.middlePoints[1].left,
-            y: this.middlePoints[1].top
-        });
-        if (this.type == types.TwoAreaRectH) {
-            var result1 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[0].left, this.points[0].top, this.points[3].left, this.points[3].top);
-            if (result1.onLine2) {
-                this.middlePoints[0].left = result1.x;
-                this.middlePoints[0].top = result1.y;
-            } else {
-                return false;
+    Shape.prototype.GetMinMaxCoodr = function(){
+        var ymin = ymax = this.points[0].top;
+        var xmin = xmax = this.points[0].left;
+
+        for(var i=0; i < this.points.length; i++){
+            if (ymin > this.points[i].top){
+                ymin = this.points[i].top;
+            }
+            if (ymax < this.points[i].top){
+                ymax = this.points[i].top;
             }
 
-            var result2 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[1].left, this.points[1].top, this.points[2].left, this.points[2].top);
-            if (result2.onLine2) {
-                this.middlePoints[1].left = result2.x;
-                this.middlePoints[1].top = result2.y;
-            } else {
-                return false;
+            if(xmin > this.points[i].left){
+                xmin = this.points[i].left;
+            }
+
+            if(xmax < this.points[i].left){
+                xmax = this.points[i].left;
             }
         }
-        if (this.type == types.TwoAreaRectV) {
-            var result1 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
-            if (result1.onLine2) {
-                this.middlePoints[0].left = result1.x;
-                this.middlePoints[0].top = result1.y;
-            } else {
-                return false;
-            }
 
-            var result2 = this.checkLineIntersection(MiddleLine[0].x, MiddleLine[0].y, MiddleLine[1].x, MiddleLine[1].y, this.points[2].left, this.points[2].top, this.points[3].left, this.points[3].top);
-            if (result2.onLine2) {
-                this.middlePoints[1].left = result2.x;
-                this.middlePoints[1].top = result2.y;
-            } else {
-                return false;
-            }
-        }
-        return true;
-
+        return {ymin: ymin, ymax: ymax, xmin: xmin, xmax: xmax}
     }
 
     Shape.prototype.FillInside = function () {
@@ -2712,7 +2682,6 @@ var Shape = /** @class */ (function () {
                 this.canvas.remove(line);
             }
 
-            
             var label = this.canvas.getItem("lb-" + oldName);
             this.canvas.remove(label);
         } else {
@@ -2721,11 +2690,11 @@ var Shape = /** @class */ (function () {
         }
         var insideArea = this.canvas.getItem("i-" + oldName, oldName);
         var arrObj = this.canvas.getObjects();
-        for(var i=0; i < arrObj.length; i++){
-            if (arrObj[i].get('name') == insideArea.get('name'))
-                {arrObj.splice(i);}
-        }
-        // this.canvas.remove(insideArea);
+        // for(var i=0; i < arrObj.length; i++){
+        //     if (arrObj[i].get('name') == insideArea.get('name'))
+        //         {arrObj.splice(i);}
+        // }
+        this.canvas.remove(insideArea);
         this.canvas.renderAll();
         this.Draw({
             scaleFactor: globalScaleValue,
@@ -3097,10 +3066,10 @@ var Shape = /** @class */ (function () {
             this.points[i].left += a;
             this.points[i].top += b;
         }
-        for (var j = 0; j < this.middlePoints.length; j++) {
-            this.middlePoints[j].left += a;
-            this.middlePoints[j].top += b;
-        }
+        // for (var j = 0; j < this.middlePoints.length; j++) {
+        //     this.middlePoints[j].left += a;
+        //     this.middlePoints[j].top += b;
+        // }
         this.lbX += a;
         this.lbY += b;
     };

@@ -283,6 +283,8 @@ var vcanvas = /** @class */ (function () {
                             if (newShape.type == types.VLine) newShape.color = colors.VerticalLine;
                             if (newShape.type == types.HLine) newShape.color = colors.HorizontalLine;
                             if (newShape.type == types.Text) newShape.color = colors.Text;
+                            if (newShape.type == types.TwoAreaRectH) newShape.color = colors.TwoAreaRectH;
+                            if (newShape.type == types.TwoAreaRectV) newShape.color = colors.TwoAreaRectV;
                         }
                         if (s.type != types.Text) {
                             for (var k = 0; k < s.middlePoints.length; k++) {
@@ -1204,8 +1206,7 @@ var vcanvas = /** @class */ (function () {
                     ${(c.type == typeColumns.Combobox) ? `
                     <td class="text-center">
                         <select id="${mother.id + '-' + s.name + '-select-' + c.name}" style="border:none; width:${c.width?c.width+'px':'50px'}">
-                        ${c.data? c.data.map(d=>`<option ${d==s[c.name]!=null? `selected="selected"`:``} value="${d}">${d}</option>
-                        `):``}
+                        ${c.data? c.data.map(d=>`<option ${s[c.name]!=null && s[c.name] == d? `selected="selected"`:``} value="${d}">${d}</option>`):``}
                         </select>
                     </td>`: ``}
                     ${(c.type == typeColumns.Checkbox) ? `
@@ -1233,15 +1234,15 @@ var vcanvas = /** @class */ (function () {
                 ${s.type==types.Text? `
                 <tr id="${mother.id + '-tr-' + s.name}" class="text-center">
                         <td  hidden="true">${s.name}</td>
-                        <td>${(mother.background.width) ? parseFloat(s.lbX / mother.background.width).toFixed(2) : parseFloat(s.lbX).toFixed(2)}</td>
-                        <td>${(mother.background.height) ? parseFloat(s.lbY / mother.background.height).toFixed(2) : parseFloat(s.lbY).toFixed(2)}</td>
+                        <td>${(mother.background.width) ? parseFloat(s.lbX / mother.background.width) : parseFloat(s.lbX)}</td>
+                        <td>${(mother.background.height) ? parseFloat(s.lbY / mother.background.height) : parseFloat(s.lbY)}</td>
                         `:
                 `${s.points.map(p =>
                     `<tr id="${mother.id + '-' + s.name + '-tr-' + p.name}" class="text-center">
                         <td  hidden="true">${s.name}</td>
                         <td>${p.name}</td>
-                        <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
-                        <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
+                        <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width) : parseFloat(p.left)}</td>
+                        <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height) : parseFloat(p.top)}</td>
                         ${s.type == types.Rect ? `
                             <td><span id="${mother.id + '-' + s.name + '-spanRemovePoint-' + p.name}" class="point-remove fa fa-eraser"></span></td>` : ``}
                         </tr>`).join('')}`
@@ -1250,8 +1251,8 @@ var vcanvas = /** @class */ (function () {
                     <tr id="${mother.id+'-'+s.name+'-tr-'+p.name}" class="text-center">
                         <td hidden="true">${s.name}</td>
                         <td>${p.name}</td>
-                        <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width).toFixed(2) : parseFloat(p.left).toFixed(2)}</td>
-                        <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height).toFixed(2) : parseFloat(p.top).toFixed(2)}</td>
+                        <td>${(mother.background.width) ? parseFloat(p.left / mother.background.width) : parseFloat(p.left)}</td>
+                        <td>${(mother.background.height) ? parseFloat(p.top / mother.background.height) : parseFloat(p.top)}</td>
                     </tr>
                 `)}
                 
@@ -1396,10 +1397,10 @@ var vcanvas = /** @class */ (function () {
                                 strokeWidth: globalStrokeWidth
                             });
                         }
-                        mother.triggerHandler('CanvasModified', {
-                            event: c.name + " checked",
-                            source: mother
-                        });
+                        // mother.triggerHandler('CanvasModified', {
+                        //     event: c.name + " select change",
+                        //     source: mother
+                        // });
                     }
                     $(`#${mother.id + '-' + s.name + '-select-' + c.name}`).change(function () {
                         if (!s.viewOnly) {
@@ -1553,8 +1554,8 @@ var vcanvas = /** @class */ (function () {
                         event: "rename",
                         source: newShape
                     });
-                    this.Remove(object);
-                    this.shapes.push(newShape);
+                    // this.Remove(object);
+                    // this.shapes.push(newShape);
                     element.defaultValue = newValue;
                 }
             } else {
@@ -1607,23 +1608,23 @@ var vcanvas = /** @class */ (function () {
             if (shape.type == types.Text) {
                 var obj = mother.canvas.getItem(shape.name, null);
                 var bound = obj.getBoundingRect();
-                ShapeExportObj.left = parseFloat(shape.lbX / image.width).toFixed(2);
-                ShapeExportObj.top = parseFloat((shape.lbY + bound.height) / image.height).toFixed(2);
+                ShapeExportObj.left = shape.lbX < 0 ? 0 : parseFloat(shape.lbX / image.width);
+                ShapeExportObj.top = shape.lbY < 0 ? 0 : parseFloat((shape.lbY + bound.height) / image.height);
             }
             shape.points.forEach(function (point) {
                 ShapeExportObj.points.push({
                     index: point.index,
                     name: point.name,
-                    left: parseFloat(point.left / image.width).toFixed(2),
-                    top: parseFloat(point.top / image.height).toFixed(2)
+                    left: point.left < 0 ? 0 : parseFloat(point.left / image.width),
+                    top: point.top < 0 ? 0 : parseFloat(point.top / image.height)
                 });
             });
             shape.middlePoints.forEach(function (point) {
                 ShapeExportObj.middlePoints.push({
                     index: point.index,
                     name: point.name,
-                    left: parseFloat(point.left / image.width).toFixed(2),
-                    top: parseFloat(point.top / image.height).toFixed(2)
+                    left: point.left < 0 ? 0 : parseFloat(point.left / image.width),
+                    top: point.top < 0 ? 0 : parseFloat(point.top / image.height)
                 });
             });
             ExportObject.shapes.push(ShapeExportObj);
@@ -1688,6 +1689,12 @@ var vcanvas = /** @class */ (function () {
         if (typeof object == 'string' || object instanceof String) {
             this.shapes.forEach(function (s) {
                 if (s.name === object) {
+                    shape = s;
+                }
+            });
+        } else {
+            this.shapes.forEach(function (s) {
+                if (s.name === object.name) {
                     shape = s;
                 }
             });
@@ -1988,7 +1995,7 @@ var Shape = /** @class */ (function () {
             parentName: this.type == types.Text ? null : this.name,
             left: this.lbX,
             top: this.lbY,
-            fontSize: 40,
+            fontSize: 33,
             fontFamily: "calibri",
             fill: this.color,
             stroke: 'black',
@@ -2466,6 +2473,8 @@ var Shape = /** @class */ (function () {
                         viewOnly: this.viewOnly
                     });
                 });
+            } else {
+                // this.FillInside();
             }
         } else {
             this.DrawLabel({
@@ -2493,6 +2502,9 @@ var Shape = /** @class */ (function () {
         var point = properties.point;
         var scaleFactor = properties.scaleFactor;
         var strokeWidth = properties.strokeWidth;
+        if (this.color == null) {
+            this.color = '#' + getRandomColor();
+        }
         if (this.type != types.Text) {
             this.Remove();
             if (point) {
@@ -2527,16 +2539,16 @@ var Shape = /** @class */ (function () {
 
                     } else if (this.type == types.TwoAreaRectV) {
                         if (point.name == 'MP-1') {
-                            var result = this.checkLineIntersection(this.middlePoints[1].left, this.middlePoints[1].top, point.left, point.top, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
+                            var result = this.checkLineIntersection(point.left, point.top, this.middlePoints[1].left, this.middlePoints[1].top, this.points[0].left, this.points[0].top, this.points[1].left, this.points[1].top);
 
                             if (result.onLine1 && result.onLine2) {
-                                var result2 = this.checkLineIntersection(result.x, result.y, result.x, this.middlePoints[1].top, this.points[2].left, this.points[2].top, this.points[1].left, this.points[1].top);
+                                var result2 = this.checkLineIntersection(result.x, result.y, result.x, this.middlePoints[1].top, this.points[2].left, this.points[2].top, this.points[3].left, this.points[3].top);
                                 if (result2.onLine2) {
                                     this.middlePoints[0].left = result.x;
                                     this.middlePoints[0].top = result.y;
 
-                                    this.middlePoints[1].left = result2.x;
-                                    this.middlePoints[1].top = result.y;
+                                    this.middlePoints[1].left = result.x;
+                                    this.middlePoints[1].top = result2.y;
                                 }
                             }
                         } else if (point.name == 'MP-2') {
@@ -2666,7 +2678,7 @@ var Shape = /** @class */ (function () {
             selectable: !this.readOnly,
             viewOnly: this.viewOnly
         });
-        if (this.type === types.Rect || this.type === types.Line) {
+        if (this.type === types.Rect || this.type === types.TwoAreaRectH || this.type === types.TwoAreaRectV || this.type === types.Line) {
             path.set({
                 perPixelTargetFind: true
             });
@@ -2686,17 +2698,35 @@ var Shape = /** @class */ (function () {
                 var p = this.canvas.getItem(this.points[i].name, oldName);
                 this.canvas.remove(p);
             }
+            for (var i = 0; i < this.middlePoints.length; i++) {
+                this.middlePoints[i].parentName = newName;
+                var p = this.canvas.getItem(this.middlePoints[i].name, oldName);
+                this.canvas.remove(p);
+            }
+            if (this.middlePoints.length > 0) {
+                var mline = this.canvas.getItem("Mline", oldName);
+                this.canvas.remove(mline);
+            }
             for (var j = 0; j < this.lines.length; j++) {
                 var line = this.canvas.getItem(this.lines[j], oldName);
                 this.canvas.remove(line);
             }
+
+            
             var label = this.canvas.getItem("lb-" + oldName);
             this.canvas.remove(label);
         } else {
             var lb = this.canvas.getItem(oldName);
             this.canvas.remove(lb);
         }
-
+        var insideArea = this.canvas.getItem("i-" + oldName, oldName);
+        var arrObj = this.canvas.getObjects();
+        for(var i=0; i < arrObj.length; i++){
+            if (arrObj[i].get('name') == insideArea.get('name'))
+                {arrObj.splice(i);}
+        }
+        // this.canvas.remove(insideArea);
+        this.canvas.renderAll();
         this.Draw({
             scaleFactor: globalScaleValue,
             strokeWidth: globalStrokeWidth

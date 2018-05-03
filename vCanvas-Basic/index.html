@@ -1,0 +1,120 @@
+<!DOCTYPE <!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>vCanvas basic</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script type="text/javascript" src="fabric.js"></script>
+</head>
+
+<body>
+    <div id="parent"></div>
+</body>
+<script src="main.js"></script>
+<script type="text/javascript">
+    var data1 = [{
+        id: 1,
+        name: 'test',
+        color: '#10ff00',
+        points: [{
+                index: 0,
+                top: 0.22,
+                left: 0.33,
+            },
+            {
+                index: 1,
+                top: 0.22,
+                left: 0.55,
+            },
+            {
+                index: 2,
+                top: 0.3,
+                left: 0.5,
+            },
+            {
+                index: 3,
+                top: 0.4,
+                left: 0.4,
+            },
+            {
+                index: 4,
+                top: 0.6,
+                left: 0.3,
+            },
+            {
+                index: 5,
+                top: 0.5,
+                left: 0.1,
+            }
+        ]
+    }, {
+        id: null,
+        name: null,
+        color: null,
+        points: [{
+                index: 0,
+                top: 0.42,
+                left: 0.53,
+            },
+            {
+                index: 1,
+                top: 0.42,
+                left: 0.75,
+            },
+            {
+                index: 2,
+                top: 0.5,
+                left: 0.75,
+            },
+            {
+                index: 3,
+                top: 0.6,
+                left: 0.45,
+            }
+        ]
+    }];
+
+    var c1 = new vcanvas({
+        parentId: "parent",
+        background: 'https://i.ytimg.com/vi/1-t1t920wXY/maxresdefault.jpg',
+        data: data1
+    });
+
+    c1.create({
+        id: null,
+        points: [{
+                index: 0,
+                top: 0.15,
+                left: 0.15,
+            },
+            {
+                index: 1,
+                top: 0.15,
+                left: 0.25,
+            },
+            {
+                index: 2,
+                top: 0.20,
+                left: 0.25,
+            },
+            {
+                index: 3,
+                top: 0.25,
+                left: 0.15,
+            }
+        ],
+        color: "red"
+    });
+
+    c1.on('CanvasModified', function (e) {
+        // e.event: name of event
+        // e.source: shape target
+        console.log(e.event, e.source, c1.toJson());
+    });
+</script>
+
+</html>

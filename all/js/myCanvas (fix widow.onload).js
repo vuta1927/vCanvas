@@ -1707,7 +1707,6 @@ var vcanvas = /** @class */ (function () {
         else
             return value;
     };
-    
     vcanvas.prototype.ToJson = function () {
         var temp = Object.assign({}, this);
         this.RemoveProperties(temp);
@@ -1766,7 +1765,12 @@ var vcanvas = /** @class */ (function () {
         var js = JSON.stringify(ExportObject);
         return js;
     }
-
+    vcanvas.prototype.RemoveProperties = function (obj) {
+        replaceValues.push('background', 'ActiveObject', 'isDrawing', 'tempPoint', 'units', 'startX',
+            'startY', 'LineHovered', 'prevSelected', 'js', 'url', 'panning', 'isMouseDown', 'AddPointMode',
+            'isMoving', 'color', 'parentName', 'AddPointMode', 'lines', 'lbX', 'lbY', 'radius', 'fill', 'stroke', 'lockMovementX',
+            'lockMovementY', 'canvas', 'x', 'y', 'parentObject');
+    }
     vcanvas.prototype.Add = function (params) {
         var properties = $.extend({
             name: null,

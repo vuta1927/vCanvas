@@ -39,6 +39,30 @@ var vcanvas = /** @class */ (function () {
 
     }
 
+    vcanvas.prototype.update = function (params) {
+        var id = params.id;
+        var color = params.color ? params.color : '#' + getRandomColor();
+        var points = params.points ? params.points : [];
+
+        if (!id) return;
+        if (points.length <= 0) return;
+
+        if (this.imageHeight <= 0 && this.imageWidth <= 0) {
+            var mother = this;
+            setTimeout(function () {
+                mother.update(params);
+            }, 200);
+        } else {
+            var shape = this.shapes.find(x => x.id == id);
+            if (shape) {
+                shape.remove();
+                this.shapes.splice(shape, 1);
+
+                this.draw(params);
+            }
+        }
+    }
+
     vcanvas.prototype.create = function (params) {
         if (this.imageHeight <= 0 && this.imageWidth <= 0) {
             var mother = this;
@@ -66,7 +90,8 @@ var vcanvas = /** @class */ (function () {
                     canvas: this.canvas,
                     shapeName: name,
                     color: color,
-                    points: points
+                    points: points,
+                    parentId: id
                 })
             });
 
@@ -90,7 +115,7 @@ var vcanvas = /** @class */ (function () {
             var newPoint = new Point({
                 index: p.index,
                 name: `P-${p.index}`,
-                parentName: params.shapeName,
+                parentId: params.parentId,
                 top: p.top * mother.imageHeight,
                 left: p.left * mother.imageHeight,
                 fill: params.color,
@@ -112,19 +137,19 @@ var vcanvas = /** @class */ (function () {
         var panning = false;
         var isMouseDown = false;
 
-        fabric.Canvas.prototype.getItem = function (name, parentName) {
+        fabric.Canvas.prototype.getItem = function (name, parentId) {
             var object = null,
                 objects = this.getObjects();
             var os = [];
             for (var i = 0, len = this.size(); i < len; i++) {
-                if (parentName) {
+                if (parentId) {
                     if (name) {
-                        if (objects[i].name && objects[i].name === name && objects[i].parentName === parentName) {
+                        if (objects[i].name && objects[i].name === name && objects[i].parentId === parentId) {
                             object = objects[i];
                             break;
                         }
                     } else {
-                        if (objects[i].parentName === parentName) {
+                        if (objects[i].parentId === parentId) {
                             os.push(objects[i]);
                         }
                     }
@@ -158,7 +183,7 @@ var vcanvas = /** @class */ (function () {
                     panning = true;
                     mother.resetHightLight();
                 } else {
-                    mother.selectedShape = mother.shapes.find(x => x.name == obj.get('parentName'));
+                    mother.selectedShape = mother.shapes.find(x => x.id == obj.get('parentId'));
                     mother.selectedShape.hightLight();
                     mother.triggerHandler('CanvasModified', {
                         event: 'clicked',
@@ -211,7 +236,7 @@ var vcanvas = /** @class */ (function () {
 
                 if (p.name.split('-')[0] == "i" || p.name.split('-')[0] == "lb") {
                     for (var i = 0; i < mother.shapes.length; i++) {
-                        if (p.parentName == mother.shapes[i].name) {
+                        if (p.parentId == mother.shapes[i].id) {
                             mother.selectedShape = mother.shapes[i];
                             mother.selectedShape.isMoving = true;
                             mother.shapes[i].Move({
@@ -225,7 +250,7 @@ var vcanvas = /** @class */ (function () {
                     }
                 } else {
                     for (var i = 0; i < mother.shapes.length; i++) {
-                        if (p.parentName === mother.shapes[i].name) {
+                        if (p.parentId == mother.shapes[i].id) {
                             mother.selectedShape = mother.shapes[i];
                             mother.selectedShape.isMoving = true;
                             mother.shapes[i].Move({
@@ -429,16 +454,17 @@ var vcanvas = /** @class */ (function () {
         });
 
         while (isExsit) {
-            if(indexs.indexOf(index) == -1){
-                isExsit = false;
-            }
-            name = "shape-" + i;
-            if (lstName.indexOf(name) == -1) {
-                isExsit = false;
+            if (indexs.indexOf(index) == -1) {
+                name = "shape-" + i;
+                if (lstName.indexOf(name) == -1) {
+                    isExsit = false;
+                } else {
+                    ++i;
+                }
             } else {
-                ++i;
+                index++;
             }
-            index ++;
+
         }
         return {
             name: name,
@@ -477,12 +503,6 @@ var vcanvas = /** @class */ (function () {
         var js = JSON.stringify(ExportObject);
         return js;
     }
-    vcanvas.prototype.RemoveProperties = function (obj) {
-        replaceValues.push('background', 'ActiveObject', 'isDrawing', 'tempPoint', 'units', 'startX',
-            'startY', 'LineHovered', 'prevSelected', 'js', 'url', 'panning', 'isMouseDown', 'AddPointMode',
-            'isMoving', 'color', 'parentName', 'AddPointMode', 'lines', 'lbX', 'lbY', 'radius', 'fill', 'stroke', 'lockMovementX',
-            'lockMovementY', 'canvas', 'x', 'y', 'parentObject');
-    }
     return vcanvas;
 }());
 
@@ -490,7 +510,7 @@ var Point = /** @class */ (function () {
     function Point(params) {
         this.index = params.index ? params.index : 0;
         this.name = params.name ? params.name : null;
-        this.parentName = params.parentName ? params.parentName : null;
+        this.parentId = params.parentId ? params.parentId : null;
         this.left = params.left ? params.left : 0;
         this.top = params.top ? params.top : 0;
         this.fill = params.fill ? params.fill : null;
@@ -518,7 +538,7 @@ var Point = /** @class */ (function () {
             stroke: 'black',
             strokeWidth: 1,
             name: this.name,
-            parentName: this.parentName,
+            parentId: this.parentId,
             XRatio: this.XRatio,
             YRatio: this.YRatio,
             hoverCursor: "pointer",
@@ -568,12 +588,12 @@ var Shape = /** @class */ (function () {
                 }
             }
         }
-        if(!data)
+        if (!data)
             data = String(this.id);
 
         var label = new fabric.IText(data, {
             name: "lb-" + this.name,
-            parentName: this.name,
+            parentId: this.id,
             left: this.lbX,
             top: this.lbY,
             fontSize: 25,
@@ -616,7 +636,7 @@ var Shape = /** @class */ (function () {
                     this.points[i + 1].top
                 ], {
                     name: "line" + i,
-                    parentName: this.name,
+                    parentId: this.id,
                     fill: this.color,
                     stroke: this.color,
                     selectable: false,
@@ -631,7 +651,7 @@ var Shape = /** @class */ (function () {
                     this.points[0].left, this.points[0].top
                 ], {
                     name: "line" + i,
-                    parentName: this.name,
+                    parentId: this.id,
                     fill: this.color,
                     stroke: this.color,
                     selectable: false,
@@ -675,8 +695,6 @@ var Shape = /** @class */ (function () {
     };
 
     Shape.prototype.hightLight = function () {
-        var shapeName = this.name;
-
         var allObject = this.canvas.getObjects();
         allObject.forEach(obj => {
             obj.set('strokeWidth', globalStrokeWidth);
@@ -687,7 +705,7 @@ var Shape = /** @class */ (function () {
             }
         });
 
-        var objectsOfShape = allObject.filter(x => x.get('parentName') == shapeName);
+        var objectsOfShape = allObject.filter(x => x.get('parentId') == this.id);
 
         objectsOfShape.forEach(obj => {
             var name = obj.get('name');
@@ -733,7 +751,7 @@ var Shape = /** @class */ (function () {
             this.color = '#' + getRandomColor();
         }
 
-        this.Remove();
+        this.remove();
         this.Draw({
             scaleFactor: scaleFactor,
             strokeWidth: strokeWidth
@@ -750,7 +768,7 @@ var Shape = /** @class */ (function () {
         var path = new fabric.Path(pathDirection);
         path.set({
             name: 'i-' + this.name,
-            parentName: this.name,
+            parentId: this.id,
             opacity: 0.01,
             hasControls: false,
             hasBorders: false,
@@ -765,8 +783,8 @@ var Shape = /** @class */ (function () {
         this.canvas.add(path);
     };
 
-    Shape.prototype.Remove = function () {
-        var objs = this.canvas.getItem('', this.name);
+    Shape.prototype.remove = function () {
+        var objs = this.canvas.getItem('', this.id);
         for (var i = 0; i < objs.length; i++) {
             this.canvas.remove(objs[i]);
         }

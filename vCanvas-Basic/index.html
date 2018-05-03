@@ -52,7 +52,7 @@
             }
         ]
     }, {
-        id: null,
+        id: 2,
         name: null,
         color: null,
         points: [{
@@ -85,7 +85,7 @@
     });
 
     c1.create({
-        id: null,
+        id: 3,
         points: [{
                 index: 0,
                 top: 0.15,
@@ -109,6 +109,32 @@
         ],
         color: "red"
     });
+
+    // c1.update({
+    //     id: 3,
+    //     color: 'red',
+    //     points: [{
+    //             index: 0,
+    //             top: 0.20,
+    //             left: 0.15,
+    //         },
+    //         {
+    //             index: 1,
+    //             top: 0.25,
+    //             left: 0.45,
+    //         },
+    //         {
+    //             index: 2,
+    //             top: 0.14,
+    //             left: 0.21,
+    //         },
+    //         {
+    //             index: 3,
+    //             top: 0.25,
+    //             left: 0.15,
+    //         }
+    //     ]
+    // });
 
     c1.on('CanvasModified', function (e) {
         // e.event: name of event

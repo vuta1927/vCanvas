@@ -18,7 +18,7 @@
 <script type="text/javascript">
     var data1 = [{
         id: 1,
-        name: 'test',
+        name: null,
         color: '#10ff00',
         points: [{
                 index: 0,
@@ -53,7 +53,7 @@
         ]
     }, {
         id: 2,
-        name: null,
+        name: 'line-test',
         color: null,
         points: [{
                 index: 0,
@@ -64,83 +64,90 @@
                 index: 1,
                 top: 0.42,
                 left: 0.75,
-            },
-            {
-                index: 2,
-                top: 0.5,
-                left: 0.75,
-            },
-            {
-                index: 3,
-                top: 0.6,
-                left: 0.45,
             }
         ]
+    }, {
+        id: 3,
+        color: null,
+        points: [{
+            index: 0,
+            top: 0.32,
+            left: 0.53,
+        }]
     }];
 
-    var c1 = new vcanvas({
+    var canvas = new vcanvas({
         parentId: "parent",
         background: 'https://i.ytimg.com/vi/1-t1t920wXY/maxresdefault.jpg',
         data: data1
+    }, ()=>{
+        canvas.on('CanvasModified', function (o) {
+            // e.event: name of event
+            // e.source: shape target
+            console.log(o.event, o.source, canvas.getSelectedObj());
+        });
+
+        canvas.create({
+            id: 4,
+            name: null,
+            points: [{
+                    index: 0,
+                    top: 0.15,
+                    left: 0.15,
+                },
+                {
+                    index: 1,
+                    top: 0.15,
+                    left: 0.25,
+                },
+                {
+                    index: 2,
+                    top: 0.20,
+                    left: 0.25,
+                },
+                {
+                    index: 3,
+                    top: 0.25,
+                    left: 0.15,
+                }
+            ],
+            color: "red"
+        }, true);
+
+        canvas.update({
+            id: 4,
+            name: 'test',
+            color: 'red',
+            points: [{
+                    index: 0,
+                    top: 0.20,
+                    left: 0.15,
+                },
+                {
+                    index: 1,
+                    top: 0.25,
+                    left: 0.45,
+                },
+                {
+                    index: 2,
+                    top: 0.14,
+                    left: 0.21,
+                },
+                {
+                    index: 3,
+                    top: 0.25,
+                    left: 0.15,
+                }
+            ]
+        });
+
+        canvas.lock(4);
+
+        //e.remove(4);
+
+        
     });
 
-    c1.create({
-        id: 3,
-        points: [{
-                index: 0,
-                top: 0.15,
-                left: 0.15,
-            },
-            {
-                index: 1,
-                top: 0.15,
-                left: 0.25,
-            },
-            {
-                index: 2,
-                top: 0.20,
-                left: 0.25,
-            },
-            {
-                index: 3,
-                top: 0.25,
-                left: 0.15,
-            }
-        ],
-        color: "red"
-    });
-
-    // c1.update({
-    //     id: 3,
-    //     color: 'red',
-    //     points: [{
-    //             index: 0,
-    //             top: 0.20,
-    //             left: 0.15,
-    //         },
-    //         {
-    //             index: 1,
-    //             top: 0.25,
-    //             left: 0.45,
-    //         },
-    //         {
-    //             index: 2,
-    //             top: 0.14,
-    //             left: 0.21,
-    //         },
-    //         {
-    //             index: 3,
-    //             top: 0.25,
-    //             left: 0.15,
-    //         }
-    //     ]
-    // });
-
-    c1.on('CanvasModified', function (e) {
-        // e.event: name of event
-        // e.source: shape target
-        console.log(e.event, e.source, c1.toJson());
-    });
 </script>
 
 </html>

@@ -415,14 +415,15 @@ var vcanvas = /** @class */ (function () {
             });
 
             var canvasHeight = document.getElementById(mother.canvasId).offsetHeight;
-            image.scaleToHeight(canvasHeight);
+
             mother.canvas.add(image);
             mother.canvas.sendToBack(image);
             mother.canvas.renderAll();
 
-            mother.imageHeight = canvasHeight;
+            mother.imageHeight = image.height;
             mother.imageWidth = image.width;
 
+            mother.canvas.setZoom(canvasHeight/image.height);
 
             mother.drawShapesFromData();
             _callback.call(this, mother);
